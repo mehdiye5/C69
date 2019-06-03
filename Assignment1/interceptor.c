@@ -391,7 +391,14 @@ static int init_function(void) {
     // NR_syscalls is the number of system calls in the system calls table
     int i;
     for (i=0; i<NR_syscalls; i++) {
-
+        // for each system call, we create a monitored pid list
+        INIT_LIST_HEAD (&table[i].my_list);
+        // number of pids in the list is 0
+        table[i].listcount = 0;
+        // number of monitored pids for this syscall is 0
+        table[i].monitored = 0;
+        // set intercepted to 0 = not intercepted
+        table[i].intercepted = 0;
     }
 
 

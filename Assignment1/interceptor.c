@@ -418,8 +418,22 @@ static int init_function(void) {
  */
 static void exit_function(void)
 {        
+    // synch - lock sys call table to write to it
+    spin_lock(&call_table_lock);
+    // set sys call table to writable
+    set_addr_rw((unsigned long)sys_call_table);
 
+    //restore custom syscall to original
+    sys_call_table[MY_CUSTOM_SYSCALL] = orig_custom_syscall;
+    //restore nr exit group to original
+    sys_call_table[__NR_exit_group] = orig_exit_group;
 
+    // set back to read only
+    set_addr_ro((unsigned long)sys_call_table);
+    // unlock bc done
+    spin_unlock(&call_table_lock);
+
+    //TODO: need to destroy list
 
 
 

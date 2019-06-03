@@ -340,6 +340,8 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 //a) the syscall must be valid (not negative, not > NR_syscalls, and not MY_CUSTOM_SYSCALL itself)
 if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL ) {
 	return -EINVAL
+} else if ((cmd != REQUEST_SYSCALL_INTERCEPT) && (cmd != REQUEST_SYSCALL_RELEASE) && (cmd != REQUEST_START_MONITORING) && (cmd != REQUEST_STOP_MONITORING)) {
+	return -EINVAL
 }
 
 //b) the pid must be valid for the last two commands.
@@ -365,17 +367,74 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 	if (REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 		// is the calling process root? 
 		if (current_uid() != 0) {
-			// if not, then check if the 'pid' requested is 0, indicating that we want to start/stop monitoring for "all pids
+			// if 'pid' is 0 and the calling process is not root, then access is denied (monitoring all pids is allowed only for root, obviously).
 			if (pid == 0) {
 				return -EPERM
 			} else if (check_pid_from_list(pid, current->pid) != 0) { // if not, then check if the 'pid' requested is owned by the calling process
 				return -EPERM
 			} 
-
 		}
 	}
 
+	// Check for correct context of commands (-EINVAL):
+	//a) Cannot de-intercept a system call that has not been intercepted yet (meaning can't release syscall that hasn't been intercepted yet).
+	if (cmd == REQUEST_SYSCALL_RELEASE && table[syscall].intercepted == 0) {
+		return -EINVAL
+	}
+	
+	//b) Cannot stop monitoring for a pid that is not being monitored, 
+	if (cmd == REQUEST_STOP_MONITORING && check_pid_monitored(syscall, pid) == 0) {
+		return -EINVAL
+	} else if (cmd == REQUEST_STOP_MONITORING && table[syscall].intercepted == 0) { //or if the system call has not been intercepted yet.
+		return -EINVAL
+	}
 
+	// Check for -EBUSY conditions:
+
+	// a) If intercepting a system call that is already intercepted.
+	if (cmd == REQUEST_SYSCALL_INTERCEPT && table[syscall].intercepted) {
+		return -EBUSY
+	} else if (cmd == REQUEST_START_MONITORING && check_pid_monitored(syscall, pid)) { // b) If monitoring a pid that is already being monitored.
+		return -EBUSY
+	}
+	
+
+	// If a pid cannot be added to a monitored list, due to no memory being available, an -ENOMEM error code should be returned.
+	/**
+	 * - Make sure to keep track of all the metadata on what is being intercepted and monitored.
+	*   Use the helper functions provided above for dealing with list operations.
+	*
+	* - Whenever altering the sys_call_table, make sure to use the set_addr_rw/set_addr_ro functions
+	*   to make the system call table writable, then set it back to read-only. 
+	*   For example: set_addr_rw((unsigned long)sys_call_table);
+	*   Also, make sure to save the original system call (you'll need it for 'interceptor' to work correctly).
+	* 
+	* - Make sure to use synchronization to ensure consistency of shared data structures.
+	*   Use the calltable_spinlock and pidlist_spinlock to ensure mutual exclusion for accesses 
+	*   to the system call table and the lists of monitored pids. Be careful to unlock any spinlocks 
+	*   you might be holding, before you exit the function (including error cases!).  
+	*/
+	switch (cmd)
+	{
+	case REQUEST_SYSCALL_INTERCEPT:
+		/* code */
+		break;
+
+	case REQUEST_SYSCALL_RELEASE:
+		/* code */
+		break;
+
+	case REQUEST_START_MONITORING:
+		/* code */
+		break;
+
+	case REQUEST_STOP_MONITORING:
+		/* code */
+		break;
+	
+	default:
+		break;
+	}
 } 
 
 

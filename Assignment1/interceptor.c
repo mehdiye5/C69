@@ -366,7 +366,7 @@ long (*orig_custom_syscall)(void);
  */
 static int init_function(void) {
     //synchronization - lock sys_call_table so no one else can write to it
-    spin_lock(&call_table_lock);
+    spin_lock(&calltable_lock);
 
     // set system call table to writable to make changes
     set_addr_rw((unsigned long)sys_call_table);
@@ -382,7 +382,7 @@ static int init_function(void) {
     //set sys call table to read only
     set_addr_ro((unsigned long)sys_call_table);
     // synch - unlock sys call table bc done using it
-    spin_unlock(&call_table_lock);
+    spin_unlock(&calltable_lock);
 
     // initialize: we have 'table' which is a mytable struct
     // table[NR_syscalls+1] is an entry for each system call
@@ -419,7 +419,7 @@ static int init_function(void) {
 static void exit_function(void)
 {        
     // synch - lock sys call table to write to it
-    spin_lock(&call_table_lock);
+    spin_lock(&calltable_lock);
     // set sys call table to writable
     set_addr_rw((unsigned long)sys_call_table);
 
@@ -431,7 +431,7 @@ static void exit_function(void)
     // set back to read only
     set_addr_ro((unsigned long)sys_call_table);
     // unlock bc done
-    spin_unlock(&call_table_lock);
+    spin_unlock(&calltable_lock);
 
     //TODO: need to destroy list
 

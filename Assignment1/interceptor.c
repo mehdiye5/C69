@@ -365,10 +365,34 @@ long (*orig_custom_syscall)(void);
  * - Ensure synchronization as needed.
  */
 static int init_function(void) {
+    //synchronization - lock sys_call_table so no one else can write to it
+    spin_lock(&call_table_lock);
 
+    // set system call table to writable to make changes
+    set_addr_rw((unsigned long)sys_call_table);
 
+    // hijack custom syscall: replace with my_syscall
+    orig_custom_syscall = sys_call_table[MY_CUSTOM_SYSCALL];
+    sys_call_table[MY_CUSTOM_SYSCALL] = my_syscall;
 
+    // hijack exit group syscall
+    orig_exit_group = sys_call_table[__NR_exit_group];
+    sys_call_table[__NR_exit_group] = my_exit_group;
 
+    //set sys call table to read only
+    set_addr_ro((unsigned long)sys_call_table);
+    // synch - unlock sys call table bc done using it
+    spin_unlock(&call_table_lock);
+
+    // initialize: we have 'table' which is a mytable struct
+    // table[NR_syscalls+1] is an entry for each system call
+
+    //my_list is list of monitored pids
+    // NR_syscalls is the number of system calls in the system calls table
+    int i;
+    for (i=0; i<NR_syscalls; i++) {
+
+    }
 
 
 

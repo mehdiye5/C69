@@ -335,6 +335,50 @@ asmlinkage long interceptor(struct pt_regs reg) {
  */
 asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 
+//For each of the commands, check that the arguments are valid (-EINVAL):
+
+//a) the syscall must be valid (not negative, not > NR_syscalls, and not MY_CUSTOM_SYSCALL itself)
+if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL ) {
+	return -EINVAL
+}
+
+//b) the pid must be valid for the last two commands.
+if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
+	//It cannot be a negative integer
+	if (pid < 0) {
+		return -EINVAL
+	} else if (pid > 0 && pid_task(find_vpid(pid), PIDTYPE_PID) == NULL) {
+		// If a pid belongs to a valid process, then the following expression is non-NULL: pid_task(find_vpid(pid), PIDTYPE_PID)
+		return -EINVAL
+	}
+
+	// Check that the caller has the right permissions (-EPERM)
+	//For the first two commands, we must be root (see the current_uid() macro)
+	if (cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE) {
+		// Not a root user
+		if (current_uid() != 0) {
+			return -EPERM
+		}
+	}
+
+	// For the last two commands, the following logic applies:
+	if (REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
+		// is the calling process root? 
+		if (current_uid() != 0) {
+			// if not, then check if the 'pid' requested is 0, indicating that we want to start/stop monitoring for "all pids
+			if (pid == 0) {
+				return -EPERM
+			} else if (check_pid_from_list(pid, current->pid) != 0) { // if not, then check if the 'pid' requested is owned by the calling process
+				return -EPERM
+			} 
+
+		}
+	}
+
+
+} 
+
+
 
 
 

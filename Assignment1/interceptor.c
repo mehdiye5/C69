@@ -417,13 +417,22 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 	switch (cmd)
 	{
 	case REQUEST_SYSCALL_INTERCEPT:
+		// we need to use spin_lock and unlock to access shared resources
 		spin_lock(&pidlist_lock);
 
+		// set status of the syscall as intercepted
 		table[syscall].intercepted = 1;
+		// unlock the pidlist_lock
 		spin_unlock(&pidlist_lock);
 
+		// lock the calltable_lock
 		spin_lock(&calltable_lock);
-
+		// set sys_call_table as read write 
+		set_addr_rw((unsigned long)sys_call_table);
+		sys_call_table[syscall] = interceptor;
+		// set sys sys_call_table as read only
+		set_addr_ro((unsigned long)sys_call_table);
+		// unlock calltable_lock
 		spin_unlock(&calltable_lock);
 
 		break;

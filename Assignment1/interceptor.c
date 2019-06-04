@@ -406,6 +406,8 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 		}
 	}
 
+	// lock pidlist_lock to asscess intercepted shared resource
+	spin_lock(&pidlist_lock);
 	// Check for correct context of commands (-EINVAL):
 	//a) Cannot de-intercept a system call that has not been intercepted yet (meaning can't release syscall that hasn't been intercepted yet).
 	if (cmd == REQUEST_SYSCALL_RELEASE && table[syscall].intercepted == 0) {
@@ -428,8 +430,10 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 		return -EBUSY
 	}
 	
+	// uncluck pidlist_lock: finished using shared resource
+	spin_unlock(&pidlist_lock);
 
-	// If a pid cannot be added to a monitored list, due to no memory being available, an -ENOMEM error code should be returned.
+	
 	/**
 	 * - Make sure to keep track of all the metadata on what is being intercepted and monitored.
 	*   Use the helper functions provided above for dealing with list operations.
@@ -439,39 +443,143 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 	*   For example: set_addr_rw((unsigned long)sys_call_table);
 	*   Also, make sure to save the original system call (you'll need it for 'interceptor' to work correctly).
 	* 
-	* - Make sure to use synchronization to ensure consistency of shared data structures.
-	*   Use the calltable_spinlock and pidlist_spinlock to ensure mutual exclusion for accesses 
-	*   to the system call table and the lists of monitored pids. Be careful to unlock any spinlocks 
-	*   you might be holding, before you exit the function (including error cases!).  
+	* - 
 	*/
 	switch (cmd)
 	{
 	case REQUEST_SYSCALL_INTERCEPT:
-		/* code */
+		// we need to use spin_lock and unlock to access shared resources
+		spin_lock(&pidlist_lock);
+
+		// set status of the syscall as intercepted
+		table[syscall].intercepted = 1;
+		// Also, make sure to save the original system call (you'll need it for 'interceptor' to work correctly).
+		table[syscall].f = sys_call_table[syscall];
+
+
+		/**
+		 * Make sure to use synchronization to ensure consistency of shared data structures.
+		*   Use the calltable_spinlock and pidlist_spinlock to ensure mutual exclusion for accesses 
+		*   to the system call table and the lists of monitored pids. Be careful to unlock any spinlocks 
+		*   you might be holding, before you exit the function (including error cases!).  
+		 * 
+		*/
+
+		// lock the calltable_lock
+		spin_lock(&calltable_lock);
+		// set sys_call_table as read write 
+		set_addr_rw((unsigned long)sys_call_table);
+		sys_call_table[syscall] = interceptor;
+		// set sys sys_call_table as read only
+		set_addr_ro((unsigned long)sys_call_table);
+		// unlock calltable_lock
+		spin_unlock(&calltable_lock);
+
+		// unlock the pidlist_lock
+		spin_unlock(&pidlist_lock);
+
 		break;
 
 	case REQUEST_SYSCALL_RELEASE:
 		/* code */
+
+		// we need to use spin_lock and unlock to access shared resources
+		spin_lock(&pidlist_lock);
+
+		// set status of the syscall as intercepted
+		table[syscall].intercepted = 0;
+		table[syscall].monitored = 0;
+
+		// lock the calltable_lock
+		spin_lock(&calltable_lock);
+		// set sys_call_table as read write 
+		set_addr_rw((unsigned long)sys_call_table);
+		sys_call_table[syscall] = table[syscall].f;
+
+		// set sys sys_call_table as read only
+		set_addr_ro((unsigned long)sys_call_table);
+
+		// unlock calltable_lock
+		spin_unlock(&calltable_lock);		
+		
+		// unlock the pidlist_lock
+		spin_unlock(&pidlist_lock);
+
 		break;
 
 	case REQUEST_START_MONITORING:
 		/* code */
+		// we need to use spin_lock and unlock to access shared resources
+		spin_lock(&pidlist_lock);
+
+		if (pid == 0) {			
+
+			table[syscall].monitored = 2;
+			// clear the list
+			destroy_list(syscall);			
+		} else {
+			
+
+			// If a pid cannot be added to a monitored list, due to no memory being available, an -ENOMEM error code should be returned.
+			if (table[syscall].monitored != 2) {
+
+				table[syscall].monitored = 1;
+
+				if (add_pid_sysc(pid, syscall) == -ENOMEM) {
+					// unlock the pidlist_lock
+					spin_unlock(&pidlist_lock);
+					return -ENOMEM;
+				}
+			} else {
+				if (del_pid_sysc(pid, syscall) == -EINVAL) {
+					spin_unlock(&pidlist_lock);
+					return -EINVAL;
+				}
+			}
+		}		
+
+		// unlock the pidlist_lock
+		spin_unlock(&pidlist_lock);
 		break;
 
 	case REQUEST_STOP_MONITORING:
 		/* code */
+		// we need to use spin_lock and unlock to access shared resources
+		spin_lock(&pidlist_lock);
+
+		if (pid == 0) {
+			table[syscall].monitored = 0;
+
+			// clear the list
+			destroy_list(syscall);			
+
+		} else {
+			table[syscall].monitored = 1;
+
+			if(table[syscall].monitored == 2) {
+				if (add_pid_sysc(pid, syscall) == -ENOMEM) {
+					spin_unlock(&pidlist_lock);
+					return -ENOMEM;
+				}
+				
+			} else {			
+
+				if (del_pid_sysc(pid, syscall) == -EINVAL) {
+					spin_unlock(&pidlist_lock);
+					return -EINVAL;
+				}
+			}
+		}
+
+		
+		spin_unlock(&pidlist_lock);
+
 		break;
 	
 	default:
 		break;
 	}
 } 
-
-
-
-
-
-
 
 	return 0;
 }

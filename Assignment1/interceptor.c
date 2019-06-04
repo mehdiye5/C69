@@ -399,7 +399,7 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 	}
 	
 
-	// If a pid cannot be added to a monitored list, due to no memory being available, an -ENOMEM error code should be returned.
+	
 	/**
 	 * - Make sure to keep track of all the metadata on what is being intercepted and monitored.
 	*   Use the helper functions provided above for dealing with list operations.
@@ -409,10 +409,7 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 	*   For example: set_addr_rw((unsigned long)sys_call_table);
 	*   Also, make sure to save the original system call (you'll need it for 'interceptor' to work correctly).
 	* 
-	* - Make sure to use synchronization to ensure consistency of shared data structures.
-	*   Use the calltable_spinlock and pidlist_spinlock to ensure mutual exclusion for accesses 
-	*   to the system call table and the lists of monitored pids. Be careful to unlock any spinlocks 
-	*   you might be holding, before you exit the function (including error cases!).  
+	* - 
 	*/
 	switch (cmd)
 	{
@@ -422,8 +419,17 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 
 		// set status of the syscall as intercepted
 		table[syscall].intercepted = 1;
-		// unlock the pidlist_lock
-		spin_unlock(&pidlist_lock);
+		// Also, make sure to save the original system call (you'll need it for 'interceptor' to work correctly).
+		table[syscall].f = sys_call_table[syscall];
+
+
+		/**
+		 * Make sure to use synchronization to ensure consistency of shared data structures.
+		*   Use the calltable_spinlock and pidlist_spinlock to ensure mutual exclusion for accesses 
+		*   to the system call table and the lists of monitored pids. Be careful to unlock any spinlocks 
+		*   you might be holding, before you exit the function (including error cases!).  
+		 * 
+		*/
 
 		// lock the calltable_lock
 		spin_lock(&calltable_lock);
@@ -435,15 +441,66 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 		// unlock calltable_lock
 		spin_unlock(&calltable_lock);
 
+		// unlock the pidlist_lock
+		spin_unlock(&pidlist_lock);
+
 		break;
 
 	case REQUEST_SYSCALL_RELEASE:
 		/* code */
+
+		// we need to use spin_lock and unlock to access shared resources
+		spin_lock(&pidlist_lock);
+
+		// set status of the syscall as intercepted
+		table[syscall].intercepted = 0;
+		table[syscall].monitored = 0;
+
+		// lock the calltable_lock
+		spin_lock(&calltable_lock);
+		// set sys_call_table as read write 
+		set_addr_rw((unsigned long)sys_call_table);
+		sys_call_table[syscall] = table[syscall].f;
+
+		// set sys sys_call_table as read only
+		set_addr_ro((unsigned long)sys_call_table);
+
+		// unlock calltable_lock
+		spin_unlock(&calltable_lock);		
+		
+		// unlock the pidlist_lock
+		spin_unlock(&pidlist_lock);
+
 		break;
 
 	case REQUEST_START_MONITORING:
 		/* code */
+		// we need to use spin_lock and unlock to access shared resources
+		spin_lock(&pidlist_lock);
+
+		if (pid == 0) {			
+
+			table[syscall].monitored = 2;
+			destroy_list(syscall);
+			table[syscall].list_inversed = 1
+		} else {
+			table[syscall].monitored = 1;
+
+			// If a pid cannot be added to a monitored list, due to no memory being available, an -ENOMEM error code should be returned.
+			if (table[syscall].table[syscall].list_inversed == 0) {
+				if (add_pid_sysc(pid, syscall) != 0) {
+					// unlock the pidlist_lock
+					spin_unlock(&pidlist_lock);
+					return -ENOMEM;
+				}
+			}
+		}		
+
+		// unlock the pidlist_lock
+		spin_unlock(&pidlist_lock);
 		break;
+
+
 
 	case REQUEST_STOP_MONITORING:
 		/* code */
@@ -453,12 +510,6 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 		break;
 	}
 } 
-
-
-
-
-
-
 
 	return 0;
 }

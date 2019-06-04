@@ -251,15 +251,18 @@ void (*orig_exit_group)(int);
  */
 void my_exit_group(int status)
 {
-
-
-
+	// Get the lock then delete the pid from all intercepted system calls
+	spin_lock(pidlist_lock);
+	del_pid(current->pid);
+	// Release the lock and call original exit group
+	spin_unlock(pidlist_lock);
+	(*orig_exit_group)(status);
 }
 //----------------------------------------------------------------
 
 
 
-/** 
+/** ple=list_entry(i, struct pid_list, list);
  * This is the generic interceptor function.
  * It should just log a message and call the original syscall.
  * 
@@ -276,12 +279,39 @@ void my_exit_group(int status)
  * - Don't forget to call the original system call, so we allow processes to proceed as normal.
  */
 asmlinkage long interceptor(struct pt_regs reg) {
+	// Get the current syscall number
+	int currSys = reg.ax; // TO BE CHANGED to either reg.eax, or reg.orig_eax
+	// Wait until getting lock to the table adn the pid list
+	spin_lock(calltable_lock);
+	spin_lock(pidlist_lock);
 
+	// If the current pid is monitored under the current syscall, load the log message
+	if (table[currSys].monitored == 2 || (table[currSys].monitored == 1 && pid_present(reg, currSys)))
+	{
+		// load the log message
+		log_message(current->pid, reg.ax, reg.bx, reg.cx, reg.dx, reg.si, reg.di, reg.bp);
+	}
+	// Release the lock to the pid list and the table
+	spin_unlock(pidlist_lock);
+	spin_unlock(calltable_lock);
+	// Call the original system call
+	return (*(table[currSys].f))(reg);
+}
 
-
-
-
-	return 0; // Just a placeholder, so it compiles with no warnings!
+int pid_present(struct pt_regs reg, int currSys)
+{
+	// Temerary pointer to each embedded list_head during the traverse
+	list_head *currNode;
+	// Traverse through all the embedded list_head,
+	//check if the pid_list struct that it's embedded in containes the current pid
+	list_for_each(currNode, table[currSys].my_list)
+	{
+		if (list_entry(currNode, struct pid_list, list)->pid == current->pid)
+		{
+			return 1;
+		}
+	}
+	return 0;
 }
 
 /**
@@ -552,4 +582,3 @@ static void exit_function(void)
 
 module_init(init_function);
 module_exit(exit_function);
-

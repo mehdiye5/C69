@@ -468,11 +468,43 @@ long (*orig_custom_syscall)(void);
  * - Ensure synchronization as needed.
  */
 static int init_function(void) {
+    //synchronization - lock sys_call_table so no one else can write to it
+    spin_lock(&calltable_lock);
 
+    // set system call table to writable to make changes
+    set_addr_rw((unsigned long)sys_call_table);
 
+    // hijack custom syscall: replace with my_syscall
+    orig_custom_syscall = sys_call_table[MY_CUSTOM_SYSCALL];
+    sys_call_table[MY_CUSTOM_SYSCALL] = my_syscall;
 
+    // hijack exit group syscall
+    orig_exit_group = sys_call_table[__NR_exit_group];
+    sys_call_table[__NR_exit_group] = my_exit_group;
 
+    //set sys call table to read only
+    set_addr_ro((unsigned long)sys_call_table);
+    // synch - unlock sys call table bc done using it
+    spin_unlock(&calltable_lock);
 
+    // initialize: we have 'table' which is a mytable struct
+    // table[NR_syscalls+1] is an entry for each system call
+
+    //my_list is list of monitored pids
+    // NR_syscalls is the number of system calls in the system calls table
+    int i;
+    spin_lock(&pidlist_lock);
+    for (i=0; i<NR_syscalls; i++) {
+        // for each system call, we create a monitored pid list
+        INIT_LIST_HEAD (&table[i].my_list);
+        // number of pids in the list is 0
+        table[i].listcount = 0;
+        // number of monitored pids for this syscall is 0
+        table[i].monitored = 0;
+        // set intercepted to 0 = not intercepted
+        table[i].intercepted = 0;
+    }
+    spin_unlock(&pidlist_lock);
 
 
 	return 0;
@@ -490,10 +522,32 @@ static int init_function(void) {
  */
 static void exit_function(void)
 {        
+    // synch - lock sys call table to write to it
+    spin_lock(&calltable_lock);
+    // set sys call table to writable
+    set_addr_rw((unsigned long)sys_call_table);
 
+    //restore custom syscall to original
+    sys_call_table[MY_CUSTOM_SYSCALL] = orig_custom_syscall;
+    //restore nr exit group to original
+    sys_call_table[__NR_exit_group] = orig_exit_group;
 
+    // set back to read only
+    set_addr_ro((unsigned long)sys_call_table);
+    // unlock bc done
+    spin_unlock(&calltable_lock);
 
-
+    //use destroy_list function to clear list of monitored pids
+    int i;
+    spin_lock(&pidlist_lock);
+    for (i=0; i<NR_syscalls; i++) {
+        destroy_list(i);
+        //change all info back to 0
+        table[i].listcount=0;
+        table[i].monitored=0;
+        table[i].intercepted=0;
+    }
+    spin_unlock(&pidlist_lock);
 
 
 }

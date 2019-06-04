@@ -295,8 +295,7 @@ asmlinkage long interceptor(struct pt_regs reg) {
 	spin_unlock(pidlist_lock);
 	spin_unlock(calltable_lock);
 	// Call the original system call
-
-	return 0; // TO BE CHANGED
+	return (*(table[currSys].f))(reg);
 }
 
 int pid_present(struct pt_regs reg, int currSys)

@@ -492,9 +492,8 @@ static int init_function(void) {
 
     //my_list is list of monitored pids
     // NR_syscalls is the number of system calls in the system calls table
-    int i;
     spin_lock(&pidlist_lock);
-    for (i=0; i<NR_syscalls; i++) {
+    for (int i=0; i<NR_syscalls; i++) {
         // for each system call, we create a monitored pid list
         INIT_LIST_HEAD (&table[i].my_list);
         // number of pids in the list is 0
@@ -538,9 +537,8 @@ static void exit_function(void)
     spin_unlock(&calltable_lock);
 
     //use destroy_list function to clear list of monitored pids
-    int i;
     spin_lock(&pidlist_lock);
-    for (i=0; i<NR_syscalls; i++) {
+    for (int i=0; i<NR_syscalls; i++) {
         destroy_list(i);
         //change all info back to 0
         table[i].listcount=0;

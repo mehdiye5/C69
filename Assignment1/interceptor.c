@@ -252,15 +252,29 @@ void (*orig_exit_group)(int);
 void my_exit_group(int status)
 {
 	// Get the lock then delete the pid from all intercepted system calls
-	spin_lock(pidlist_lock);
+	spin_lock(&pidlist_lock);
 	del_pid(current->pid);
 	// Release the lock and call original exit group
-	spin_unlock(pidlist_lock);
+	spin_unlock(&pidlist_lock);
 	(*orig_exit_group)(status);
 }
 //----------------------------------------------------------------
 
-
+int pid_present(struct pt_regs reg, int currSys)
+{
+	// Temerary pointer to each embedded list_head during the traverse
+	struct list_head *currNode;
+	// Traverse through all the embedded list_head,
+	//check if the pid_list struct that it's embedded in containes the current pid
+	list_for_each(currNode, &(table[currSys].my_list))
+	{
+		if (list_entry(currNode, struct pid_list, list)->pid == current->pid)
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
 
 /** ple=list_entry(i, struct pid_list, list);
  * This is the generic interceptor function.
@@ -282,8 +296,8 @@ asmlinkage long interceptor(struct pt_regs reg) {
 	// Get the current syscall number
 	int currSys = reg.ax; // TO BE CHANGED to either reg.eax, or reg.orig_eax
 	// Wait until getting lock to the table adn the pid list
-	spin_lock(calltable_lock);
-	spin_lock(pidlist_lock);
+	spin_lock(&calltable_lock);
+	spin_lock(&pidlist_lock);
 
 	// If the current pid is monitored under the current syscall, load the log message
 	if (table[currSys].monitored == 2 || (table[currSys].monitored == 1 && pid_present(reg, currSys)))
@@ -292,27 +306,13 @@ asmlinkage long interceptor(struct pt_regs reg) {
 		log_message(current->pid, reg.ax, reg.bx, reg.cx, reg.dx, reg.si, reg.di, reg.bp);
 	}
 	// Release the lock to the pid list and the table
-	spin_unlock(pidlist_lock);
-	spin_unlock(calltable_lock);
+	spin_unlock(&pidlist_lock);
+	spin_unlock(&calltable_lock);
 	// Call the original system call
 	return (*(table[currSys].f))(reg);
 }
 
-int pid_present(struct pt_regs reg, int currSys)
-{
-	// Temerary pointer to each embedded list_head during the traverse
-	list_head *currNode;
-	// Traverse through all the embedded list_head,
-	//check if the pid_list struct that it's embedded in containes the current pid
-	list_for_each(currNode, table[currSys].my_list)
-	{
-		if (list_entry(currNode, struct pid_list, list)->pid == current->pid)
-		{
-			return 1;
-		}
-	}
-	return 0;
-}
+
 
 /**
  * My system call - this function is called whenever a user issues a MY_CUSTOM_SYSCALL system call.
@@ -369,19 +369,19 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 
 //a) the syscall must be valid (not negative, not > NR_syscalls, and not MY_CUSTOM_SYSCALL itself)
 if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL ) {
-	return -EINVAL
+	return -EINVAL;
 } else if ((cmd != REQUEST_SYSCALL_INTERCEPT) && (cmd != REQUEST_SYSCALL_RELEASE) && (cmd != REQUEST_START_MONITORING) && (cmd != REQUEST_STOP_MONITORING)) {
-	return -EINVAL
+	return -EINVAL;
 }
 
 //b) the pid must be valid for the last two commands.
 if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 	//It cannot be a negative integer
 	if (pid < 0) {
-		return -EINVAL
+		return -EINVAL;
 	} else if (pid > 0 && pid_task(find_vpid(pid), PIDTYPE_PID) == NULL) {
 		// If a pid belongs to a valid process, then the following expression is non-NULL: pid_task(find_vpid(pid), PIDTYPE_PID)
-		return -EINVAL
+		return -EINVAL;
 	}
 
 	// Check that the caller has the right permissions (-EPERM)
@@ -389,7 +389,7 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 	if (cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE) {
 		// Not a root user
 		if (current_uid() != 0) {
-			return -EPERM
+			return -EPERM;
 		}
 	}
 
@@ -399,9 +399,9 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 		if (current_uid() != 0) {
 			// if 'pid' is 0 and the calling process is not root, then access is denied (monitoring all pids is allowed only for root, obviously).
 			if (pid == 0) {
-				return -EPERM
+				return -EPERM;
 			} else if (check_pid_from_list(pid, current->pid) != 0) { // if not, then check if the 'pid' requested is owned by the calling process
-				return -EPERM
+				return -EPERM;
 			} 
 		}
 	}
@@ -411,23 +411,23 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 	// Check for correct context of commands (-EINVAL):
 	//a) Cannot de-intercept a system call that has not been intercepted yet (meaning can't release syscall that hasn't been intercepted yet).
 	if (cmd == REQUEST_SYSCALL_RELEASE && table[syscall].intercepted == 0) {
-		return -EINVAL
+		return -EINVAL;
 	}
 	
 	//b) Cannot stop monitoring for a pid that is not being monitored, 
 	if (cmd == REQUEST_STOP_MONITORING && check_pid_monitored(syscall, pid) == 0) {
-		return -EINVAL
+		return -EINVAL;
 	} else if (cmd == REQUEST_STOP_MONITORING && table[syscall].intercepted == 0) { //or if the system call has not been intercepted yet.
-		return -EINVAL
+		return -EINVAL;
 	}
 
 	// Check for -EBUSY conditions:
 
 	// a) If intercepting a system call that is already intercepted.
 	if (cmd == REQUEST_SYSCALL_INTERCEPT && table[syscall].intercepted) {
-		return -EBUSY
+		return -EBUSY;
 	} else if (cmd == REQUEST_START_MONITORING && check_pid_monitored(syscall, pid)) { // b) If monitoring a pid that is already being monitored.
-		return -EBUSY
+		return -EBUSY;
 	}
 	
 	// uncluck pidlist_lock: finished using shared resource

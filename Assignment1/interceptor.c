@@ -498,6 +498,7 @@ long (*orig_custom_syscall)(void);
  * - Ensure synchronization as needed.
  */
 static int init_function(void) {
+    int i;
     //synchronization - lock sys_call_table so no one else can write to it
     spin_lock(&calltable_lock);
 
@@ -523,7 +524,7 @@ static int init_function(void) {
     //my_list is list of monitored pids
     // NR_syscalls is the number of system calls in the system calls table
     spin_lock(&pidlist_lock);
-    for (int i=0; i<NR_syscalls; i++) {
+    for (i=0; i<NR_syscalls; i++) {
         // for each system call, we create a monitored pid list
         INIT_LIST_HEAD (&table[i].my_list);
         // number of pids in the list is 0
@@ -551,6 +552,7 @@ static int init_function(void) {
  */
 static void exit_function(void)
 {        
+    int i;
     // synch - lock sys call table to write to it
     spin_lock(&calltable_lock);
     // set sys call table to writable
@@ -568,7 +570,7 @@ static void exit_function(void)
 
     //use destroy_list function to clear list of monitored pids
     spin_lock(&pidlist_lock);
-    for (int i=0; i<NR_syscalls; i++) {
+    for (i=0; i<NR_syscalls; i++) {
         destroy_list(i);
         //change all info back to 0
         table[i].listcount=0;

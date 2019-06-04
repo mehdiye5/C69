@@ -376,6 +376,8 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 		}
 	}
 
+	// lock pidlist_lock to asscess intercepted shared resource
+	spin_lock(&pidlist_lock);
 	// Check for correct context of commands (-EINVAL):
 	//a) Cannot de-intercept a system call that has not been intercepted yet (meaning can't release syscall that hasn't been intercepted yet).
 	if (cmd == REQUEST_SYSCALL_RELEASE && table[syscall].intercepted == 0) {
@@ -398,6 +400,8 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 		return -EBUSY
 	}
 	
+	// uncluck pidlist_lock: finished using shared resource
+	spin_unlock(&pidlist_lock);
 
 	
 	/**
@@ -481,17 +485,25 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 		if (pid == 0) {			
 
 			table[syscall].monitored = 2;
-			destroy_list(syscall);
-			table[syscall].list_inversed = 1
+			// clear the list
+			destroy_list(syscall);			
 		} else {
-			table[syscall].monitored = 1;
+			
 
 			// If a pid cannot be added to a monitored list, due to no memory being available, an -ENOMEM error code should be returned.
-			if (table[syscall].table[syscall].list_inversed == 0) {
-				if (add_pid_sysc(pid, syscall) != 0) {
+			if (table[syscall].monitored != 2) {
+
+				table[syscall].monitored = 1;
+
+				if (add_pid_sysc(pid, syscall) == -ENOMEM) {
 					// unlock the pidlist_lock
 					spin_unlock(&pidlist_lock);
 					return -ENOMEM;
+				}
+			} else {
+				if (del_pid_sysc(pid, syscall) == -EINVAL) {
+					spin_unlock(&pidlist_lock);
+					return -EINVAL;
 				}
 			}
 		}		
@@ -500,10 +512,38 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 		spin_unlock(&pidlist_lock);
 		break;
 
-
-
 	case REQUEST_STOP_MONITORING:
 		/* code */
+		// we need to use spin_lock and unlock to access shared resources
+		spin_lock(&pidlist_lock);
+
+		if (pid == 0) {
+			table[syscall].monitored = 0;
+
+			// clear the list
+			destroy_list(syscall);			
+
+		} else {
+			table[syscall].monitored = 1;
+
+			if(table[syscall].monitored == 2) {
+				if (add_pid_sysc(pid, syscall) == -ENOMEM) {
+					spin_unlock(&pidlist_lock);
+					return -ENOMEM;
+				}
+				
+			} else {			
+
+				if (del_pid_sysc(pid, syscall) == -EINVAL) {
+					spin_unlock(&pidlist_lock);
+					return -EINVAL;
+				}
+			}
+		}
+
+		
+		spin_unlock(&pidlist_lock);
+
 		break;
 	
 	default:

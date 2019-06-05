@@ -411,13 +411,19 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 	// Check for correct context of commands (-EINVAL):
 	//a) Cannot de-intercept a system call that has not been intercepted yet (meaning can't release syscall that hasn't been intercepted yet).
 	if (cmd == REQUEST_SYSCALL_RELEASE && table[syscall].intercepted == 0) {
+		// uncluck pidlist_lock: finished using shared resource
+		spin_unlock(&pidlist_lock);
 		return -EINVAL;
 	}
 	
 	//b) Cannot stop monitoring for a pid that is not being monitored, 
-	if (cmd == REQUEST_STOP_MONITORING && check_pid_monitored(syscall, pid) == 0) {
+	if (cmd == REQUEST_STOP_MONITORING && check_pid_monitored(syscall, pid) == 0 && pid != 0) {
+		// uncluck pidlist_lock: finished using shared resource
+		spin_unlock(&pidlist_lock);
 		return -EINVAL;
 	} else if (cmd == REQUEST_STOP_MONITORING && table[syscall].intercepted == 0) { //or if the system call has not been intercepted yet.
+		// uncluck pidlist_lock: finished using shared resource
+		spin_unlock(&pidlist_lock);
 		return -EINVAL;
 	}
 
@@ -425,8 +431,12 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 
 	// a) If intercepting a system call that is already intercepted.
 	if (cmd == REQUEST_SYSCALL_INTERCEPT && table[syscall].intercepted) {
+		// uncluck pidlist_lock: finished using shared resource
+		spin_unlock(&pidlist_lock);
 		return -EBUSY;
 	} else if (cmd == REQUEST_START_MONITORING && check_pid_monitored(syscall, pid)) { // b) If monitoring a pid that is already being monitored.
+		// uncluck pidlist_lock: finished using shared resource
+		spin_unlock(&pidlist_lock);
 		return -EBUSY;
 	}
 	
@@ -456,6 +466,8 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 		// Also, make sure to save the original system call (you'll need it for 'interceptor' to work correctly).
 		table[syscall].f = sys_call_table[syscall];
 
+		// unlock the pidlist_lock
+		spin_unlock(&pidlist_lock);
 
 		/**
 		 * Make sure to use synchronization to ensure consistency of shared data structures.
@@ -468,15 +480,14 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 		// lock the calltable_lock
 		spin_lock(&calltable_lock);
 		// set sys_call_table as read write 
-		set_addr_rw((unsigned long)sys_call_table);
+		set_addr_rw((unsigned long) sys_call_table);
 		sys_call_table[syscall] = interceptor;
 		// set sys sys_call_table as read only
-		set_addr_ro((unsigned long)sys_call_table);
+		set_addr_ro((unsigned long) sys_call_table);
 		// unlock calltable_lock
 		spin_unlock(&calltable_lock);
 
-		// unlock the pidlist_lock
-		spin_unlock(&pidlist_lock);
+		
 
 		break;
 

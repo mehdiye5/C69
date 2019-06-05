@@ -416,7 +416,7 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 	}
 	
 	//b) Cannot stop monitoring for a pid that is not being monitored, 
-	if (cmd == REQUEST_STOP_MONITORING && check_pid_monitored(syscall, pid) == 0) {
+	if (cmd == REQUEST_STOP_MONITORING && check_pid_monitored(syscall, pid) == 0 && pid != 0) {
         spin_unlock(&pidlist_lock);
 		return -EINVAL;
 	} else if (cmd == REQUEST_STOP_MONITORING && table[syscall].intercepted == 0) { //or if the system call has not been intercepted yet.

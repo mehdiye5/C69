@@ -411,23 +411,28 @@ if (cmd == REQUEST_START_MONITORING || REQUEST_STOP_MONITORING) {
 	// Check for correct context of commands (-EINVAL):
 	//a) Cannot de-intercept a system call that has not been intercepted yet (meaning can't release syscall that hasn't been intercepted yet).
 	if (cmd == REQUEST_SYSCALL_RELEASE && table[syscall].intercepted == 0) {
+        spin_unlock(&pidlist_lock);
 		return -EINVAL;
 	}
 	
 	//b) Cannot stop monitoring for a pid that is not being monitored, 
 	if (cmd == REQUEST_STOP_MONITORING && check_pid_monitored(syscall, pid) == 0) {
+        spin_unlock(&pidlist_lock);
 		return -EINVAL;
 	} else if (cmd == REQUEST_STOP_MONITORING && table[syscall].intercepted == 0) { //or if the system call has not been intercepted yet.
-		return -EINVAL;
+		spin_unlock(&pidlist_lock);
+        return -EINVAL;
 	}
 
 	// Check for -EBUSY conditions:
 
 	// a) If intercepting a system call that is already intercepted.
 	if (cmd == REQUEST_SYSCALL_INTERCEPT && table[syscall].intercepted) {
+        spin_unlock(&pidlist_lock);
 		return -EBUSY;
 	} else if (cmd == REQUEST_START_MONITORING && check_pid_monitored(syscall, pid)) { // b) If monitoring a pid that is already being monitored.
-		return -EBUSY;
+		spin_unlock(&pidlist_lock);
+        return -EBUSY;
 	}
 	
 	// uncluck pidlist_lock: finished using shared resource

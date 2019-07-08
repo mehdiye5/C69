@@ -1,3 +1,3 @@
 # Assignments for Operating Systems Course
-## Assignment 1 is due on Wednesday June 5th, 2019
+## Assignment 2 is due on Wednesday July 10th, 2019
 ### Instructions 

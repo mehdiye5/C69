@@ -12,19 +12,19 @@ extern int debug;
 
 extern struct frame *coremap;
 
-int index;
+int ind;
 
 /* Page to evict is chosen using the fifo algorithm.
- * Returns the page frame number (which is also the index in the coremap)
+ * Returns the page frame number (which is also the ind in the coremap)
  * for the page that is to be evicted.
  */
 int fifo_evict() {
-	// index to be evicted
-	int evicted = index;
+	// ind to be evicted
+	int evicted = ind;
 
-	// new index location
-	// we use mod, becase if index = memsize then index will equal to 0 (memsize % memsize equals to 0)
-	index = (index + 1) % memsize;
+	// new ind location
+	// we use mod, becase if ind = memsize then ind will equal to 0 (memsize % memsize equals to 0)
+	ind = (ind + 1) % memsize;
 	
 	return evicted;
 }
@@ -42,6 +42,6 @@ void fifo_ref(pgtbl_entry_t *p) {
  * replacement algorithm 
  */
 void fifo_init() {
-	// initialize index at 0
-	index = 0;
+	// initialize ind at 0
+	ind = 0;
 }

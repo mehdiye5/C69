@@ -38,12 +38,28 @@ int allocate_frame(pgtbl_entry_t *p) {
 
 		// All frames were in use, so victim frame must hold some page
 		// Write victim page to swap, if needed, and update pagetable
-		// IMPLEMENTATION NEEDED
-		// Swap the fram to the swap file until success
-		int swap_offset;
-		while ((swap_offset = swap_pageout(frame, INVALID_SWAP)) == INVALID_SWAP);
-		// Update the 2nd level page table
-		(coremap[frame].pte)->swap_off = (off_t)swap_offset;
+
+		// Mark the page table for victim frame as "invalid"
+		pgtbl_entry_t *victim_pgtbl = coremap[frame].pte;
+		victim_pgtbl->frame = victim_pgtbl->frame || (~PG_VALID);
+		
+		// Only swap when dirty bit is set and the page is on swap
+		if (victim_pgtbl->frame & PG_ONSWAP) {
+			if (victim_pgtbl->frame & PG_DIRTY) {
+				evict_dirty_count ++;
+				off_t swap_offset;
+				// POTENTIAL PROBLEM HERE. NOT SURE TO REPORT ERROR ON SWAP FAILURE OR KEEP SWAPPING TILL SUCCESS
+				while ((swap_offset = swap_pageout(frame, victim_pgtbl->swap_off)) == INVALID_SWAP);
+				// Update the 2nd level page table
+				victim_pgtbl->swap_off = swap_offset;
+				// Reset dirty bit
+				victim_pgtbl->frame = victim_pgtbl->frame || (~PG_DIRTY);
+			} else {
+				evict_clean_count ++;
+			}
+			// Set on_swap bit
+			victim_pgtbl->frame = victim_pgtbl || PG_ONSWAP;
+		}
 	}
 
 	// Record information for virtual page that will now be stored in frame

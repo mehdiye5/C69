@@ -39,8 +39,11 @@ int allocate_frame(pgtbl_entry_t *p) {
 		// All frames were in use, so victim frame must hold some page
 		// Write victim page to swap, if needed, and update pagetable
 		// IMPLEMENTATION NEEDED
-
-
+		// Swap the fram to the swap file until success
+		int swap_offset;
+		while ((swap_offset = swap_pageout(frame, INVALID_SWAP)) == INVALID_SWAP);
+		// Update the 2nd level page table
+		(coremap[frame].pte)->swap_off = (off_t)swap_offset;
 	}
 
 	// Record information for virtual page that will now be stored in frame
@@ -109,7 +112,7 @@ void init_frame(int frame, addr_t vaddr) {
 	// Calculate pointer to start of frame in (simulated) physical memory
 	char *mem_ptr = &physmem[frame*SIMPAGESIZE];
 	// Calculate pointer to location in page where we keep the vaddr
-        addr_t *vaddr_ptr = (addr_t *)(mem_ptr + sizeof(int));
+    addr_t *vaddr_ptr = (addr_t *)(mem_ptr + sizeof(int));
 	
 	memset(mem_ptr, 0, SIMPAGESIZE); // zero-fill the frame
 	*vaddr_ptr = vaddr;             // record the vaddr for error checking
@@ -131,26 +134,45 @@ void init_frame(int frame, addr_t vaddr) {
  * this function.
  */
 char *find_physpage(addr_t vaddr, char type) {
+	ref_count ++;
+
 	pgtbl_entry_t *p=NULL; // pointer to the full page table entry for vaddr
 	unsigned idx = PGDIR_INDEX(vaddr); // get index into page directory
 
 	// IMPLEMENTATION NEEDED
-	// Use top-level page directory to get pointer to 2nd-level page table
-	(void)idx; // To keep compiler happy - remove when you have a real use.
-
+	// Use top-level page directory to get the index of the 2nd-level page table
+	pgdir_entry_t pgdir_entry = pgdir[idx];
+	pgtbl_entry_t *pgtbl = (pgtbl_entry_t *)pgdir_entry.pde;
 
 	// Use vaddr to get index into 2nd-level page table and initialize 'p'
-
-
+	unsigned idx2 = PGTBL_INDEX(vaddr);
+	p = &(pgtbl[idx2]); //***************Is pgtbl an array? Looks like it is a pointer
 
 	// Check if p is valid or not, on swap or not, and handle appropriately
-
-
+	if (p->frame & PG_VALID) {
+		// Page valid
+		hit_count ++;
+	}
+	else {
+		miss_count ++;
+		if (p->frame & PG_ONSWAP) {
+			// Page invalid and on swap
+			int iFrame = allocate_frame(p);
+			while (swap_pagein(iFrame, p->swap_off) != 0);
+		}
+		else {
+			// Page invalid and not on swap
+			init_frame(p->frame, vaddr);
+		}
+	}
 
 	// Make sure that p is marked valid and referenced. Also mark it
 	// dirty if the access type indicates that the page will be written to.
-
-
+	p->frame = p->frame || PG_VALID;
+	p->frame = p->frame || PG_REF;
+	if (type == 'M' || type || 'S') {
+		p->frame = p->frame || PG_DIRTY;
+	}
 
 	// Call replacement algorithm's ref_fcn for this page
 	ref_fcn(p);

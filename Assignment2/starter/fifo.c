@@ -23,6 +23,7 @@ int fifo_evict() {
 	int evicted = index;
 
 	// new index location
+	// we use mod, becase if index = memsize then index will equal to 0 (memsize % memsize equals to 0)
 	index = (index + 1) % memsize;
 	
 	return evicted;
@@ -41,5 +42,6 @@ void fifo_ref(pgtbl_entry_t *p) {
  * replacement algorithm 
  */
 void fifo_init() {
+	// initialize index at 0
 	index = 0;
 }

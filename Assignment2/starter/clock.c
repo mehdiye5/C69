@@ -26,13 +26,16 @@ int clock_evict() {
     while (1) {
         // check if clock hand is less than the end
         if (clock <= memsize) {
-            // if this page's reference bit is set
+            // if this page's reference bit is set/turned on
             if (coremap[clock].pte->frame & PG_REF) {
                 //give it a second chance
-                //set reference bit off
+                //set reference bit off/ turn it off
                 // &= removes bits
                 coremap[clock].pte->frame &= ~PG_REF;
+                // continue with next page
             } else {
+                //ref bit is off, has not been used recently
+                // evict this page
                 return clock;
             }
         } else {

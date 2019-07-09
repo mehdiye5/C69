@@ -54,6 +54,9 @@ typedef struct {
 typedef struct { 
 	unsigned int frame; // if valid bit == 1, physical frame holding vpage
 	off_t swap_off;       // offset in swap file of vpage, if any
+    addr_t vaddr;         // virtual address for opt algorithm
+
+    
 } pgtbl_entry_t;    
 
 extern void init_pagetable();

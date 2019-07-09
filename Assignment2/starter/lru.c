@@ -35,8 +35,8 @@ int lru_evict() {
 
 	int index;
 		// case:  there are no pages to evict
-		if (buttom != NULL) {
-			index = bottom.index;
+		if (bottom != NULL) {
+			index = bottom->index;
 			s_node* evicted = bottom;
 
 
@@ -70,14 +70,14 @@ void lru_ref(pgtbl_entry_t *p) {
 
 	// case: page hasn't been referenced before or has been evicted
 	if (coremap[index].evic == 0) {
-		s_node ref_node = (s_node*)malloc(sizeof(s_node));
-		ref_node.index = index;		
+		s_node* ref_node = (s_node *) malloc(sizeof(s_node));
+		ref_node->index = index;		
 
 		if (top == NULL) {
 			top = ref_node;
 			bottom = ref_node;
 		} else {
-			bottom.next = ref_node;
+			bottom->next = ref_node;
 			bottom = bottom->next;
 		}
 	} else {
@@ -89,7 +89,7 @@ void lru_ref(pgtbl_entry_t *p) {
 
 	// look for the node with desired index/frame number
 	for (curr = bottom; curr != NULL && curr->index != index; curr = curr->next) {
-		prev = curr
+		prev = curr;
 	}
 
 	// case: there is more than 1 node in the stack

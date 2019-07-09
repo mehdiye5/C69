@@ -68,6 +68,8 @@ struct frame {
 	char in_use;       // True if frame is allocated, False if frame is free
 	pgtbl_entry_t *pte;// Pointer back to pagetable entry (pte) for page
 	                   // stored in this frame
+
+	int evic;          // attribute used for LRU.c replacement algorithm value 0 or 1 
 };
 
 /* The coremap holds information about physical memory.

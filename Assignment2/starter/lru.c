@@ -14,7 +14,7 @@ extern struct frame *coremap;
 
 typedef struct stack_node {    
     struct stack_node* next; // next node pointer
-	int index; // page frame number.
+	int ind; // page frame number.
 } s_node;
 
 s_node* bottom;
@@ -27,21 +27,21 @@ s_node* top;
  */
 
 /* Page to evict is chosen using the accurate LRU algorithm.
- * Returns the page frame number (which is also the index in the coremap)
+ * Returns the page frame number (which is also the ind in the coremap)
  * for the page that is to be evicted.
  */
 
 int lru_evict() {
 
-	int index;
+	int ind;
 		// case:  there are no pages to evict
 		if (bottom != NULL) {
-			index = bottom->index;
+			ind = bottom->ind;
 			s_node* evicted = bottom;
 
 
 			// case: there is only one node in the stack
-			if (bottom->index == top->index) {
+			if (bottom->ind == top->ind) {
 				bottom = NULL;
 				top = NULL;
 			} else {
@@ -51,13 +51,13 @@ int lru_evict() {
 			}
 
 			// set eviction bit value to evicted status aka 0
-			coremap[index].evic = 0;	
+			coremap[ind].evic = 0;	
 		}
 		/* data */
 	
 	
 	
-	return index;
+	return ind;
 }
 
 /* This function is called on each access to a page to update any information
@@ -66,12 +66,12 @@ int lru_evict() {
  */
 void lru_ref(pgtbl_entry_t *p) {
 
-	int index = p->frame >> PAGE_SHIFT;
+	int ind = p->frame >> PAGE_SHIFT;
 
 	// case: page hasn't been referenced before or has been evicted
-	if (coremap[index].evic == 0) {
+	if (coremap[ind].evic == 0) {
 		s_node* ref_node = (s_node *) malloc(sizeof(s_node));
-		ref_node->index = index;		
+		ref_node->ind = ind;		
 
 		if (top == NULL) {
 			top = ref_node;
@@ -83,17 +83,17 @@ void lru_ref(pgtbl_entry_t *p) {
 	} else {
 	// case: page has been referenced before
 	// if page has been reference meanse that there is at least one node in the stack
-	// if there is there is only one node (meaning their frame/index numbers are the same) then there is no need to do anything
+	// if there is there is only one node (meaning their frame/ind numbers are the same) then there is no need to do anything
 	s_node* curr;
 	s_node* prev;
 
-	// look for the node with desired index/frame number
-	for (curr = bottom; curr != NULL && curr->index != index; curr = curr->next) {
+	// look for the node with desired ind/frame number
+	for (curr = bottom; curr != NULL && curr->ind != ind; curr = curr->next) {
 		prev = curr;
 	}
 
 	// case: there is more than 1 node in the stack
-	if (prev->index != curr->index) {
+	if (prev->ind != curr->ind) {
 		// unlinck found node
 		prev->next = curr->next;
 		curr->next = NULL;

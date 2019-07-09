@@ -41,24 +41,26 @@ int allocate_frame(pgtbl_entry_t *p) {
 
 		// Mark the page table for victim frame as "invalid"
 		pgtbl_entry_t *victim_pgtbl = coremap[frame].pte;
-		victim_pgtbl->frame = victim_pgtbl->frame || (~PG_VALID);
+		victim_pgtbl->frame = victim_pgtbl->frame | (~PG_VALID);
 		
-		// Only swap when dirty bit is set and the page is on swap
 		if (victim_pgtbl->frame & PG_ONSWAP) {
+			// Page dirty, swap required
 			if (victim_pgtbl->frame & PG_DIRTY) {
-				evict_dirty_count ++;
 				off_t swap_offset;
 				// POTENTIAL PROBLEM HERE. NOT SURE TO REPORT ERROR ON SWAP FAILURE OR KEEP SWAPPING TILL SUCCESS
 				while ((swap_offset = swap_pageout(frame, victim_pgtbl->swap_off)) == INVALID_SWAP);
 				// Update the 2nd level page table
 				victim_pgtbl->swap_off = swap_offset;
 				// Reset dirty bit
-				victim_pgtbl->frame = victim_pgtbl->frame || (~PG_DIRTY);
-			} else {
+				victim_pgtbl->frame = victim_pgtbl->frame | (~PG_DIRTY);
+				evict_dirty_count ++;
+			}
+			// Page clean, no swap required
+			else {
 				evict_clean_count ++;
 			}
 			// Set on_swap bit
-			victim_pgtbl->frame = victim_pgtbl || PG_ONSWAP;
+			victim_pgtbl->frame = victim_pgtbl->frame | PG_ONSWAP;
 		}
 	}
 
@@ -165,29 +167,32 @@ char *find_physpage(addr_t vaddr, char type) {
 	p = &(pgtbl[idx2]); //***************Is pgtbl an array? Looks like it is a pointer
 
 	// Check if p is valid or not, on swap or not, and handle appropriately
+	// Page valid
 	if (p->frame & PG_VALID) {
-		// Page valid
 		hit_count ++;
 	}
+	// Page invalid
 	else {
 		miss_count ++;
+		int iFrame = allocate_frame(p);
+		// Page invalid and on swap
 		if (p->frame & PG_ONSWAP) {
-			// Page invalid and on swap
-			int iFrame = allocate_frame(p);
+			// POTENTIAL PROBLEM HERE. NOT SURE TO REPORT ERROR ON SWAP FAILURE OR KEEP SWAPPING TILL SUCCESS
 			while (swap_pagein(iFrame, p->swap_off) != 0);
 		}
+		// Page invalid and not on swap
 		else {
-			// Page invalid and not on swap
-			init_frame(p->frame, vaddr);
+			init_frame(iFrame, vaddr);
+			p->frame = iFrame;
 		}
 	}
 
 	// Make sure that p is marked valid and referenced. Also mark it
 	// dirty if the access type indicates that the page will be written to.
-	p->frame = p->frame || PG_VALID;
-	p->frame = p->frame || PG_REF;
-	if (type == 'M' || type || 'S') {
-		p->frame = p->frame || PG_DIRTY;
+	p->frame = p->frame | PG_VALID;
+	p->frame = p->frame | PG_REF;
+	if ((type == 'M') || (type | 'S')) {
+		p->frame = p->frame | PG_DIRTY;
 	}
 
 	// Call replacement algorithm's ref_fcn for this page

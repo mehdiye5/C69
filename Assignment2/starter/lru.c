@@ -119,9 +119,9 @@ void lru_init() {
 	// initialize top and bottom of the stack
 	bottom = NULL;
 	top = NULL;
-
+    int i;
 	// set all eviction bit vulues to 0 meaning, have been evicted
-	for(int i = 0; i < memsize; ++i) {
+	for(i = 0; i < memsize; ++i) {
 		coremap[i].evic = 0;
 	}
 

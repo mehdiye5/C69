@@ -4,7 +4,7 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include "pagetable.h"
-#include "sim.h"
+
 
 
 extern int memsize;
@@ -15,7 +15,7 @@ extern struct frame *coremap;
 
 extern char *tracefile; 
 
-
+#define MAXLINE 256
 
 //need to replace the page that will be referenced the furthest in the future, or not at all
 

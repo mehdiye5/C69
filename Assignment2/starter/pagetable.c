@@ -48,7 +48,10 @@ int allocate_frame(pgtbl_entry_t *p) {
 			if (victim_pgtbl->frame & PG_DIRTY) {
 				off_t swap_offset;
 				// POTENTIAL PROBLEM HERE. NOT SURE TO REPORT ERROR ON SWAP FAILURE OR KEEP SWAPPING TILL SUCCESS
-				while ((swap_offset = swap_pageout(frame, victim_pgtbl->swap_off)) == INVALID_SWAP);
+				if ((swap_offset = swap_pageout(frame, victim_pgtbl->swap_off)) == INVALID_SWAP) {
+					perror("Fail to swap page out");
+					exit(-1);
+				}
 				// Update the 2nd level page table
 				victim_pgtbl->swap_off = swap_offset;
 				// Reset dirty bit
@@ -181,13 +184,16 @@ char *find_physpage(addr_t vaddr, char type) {
 		// Page invalid and on swap
 		if (p->frame & PG_ONSWAP) {
 			// POTENTIAL PROBLEM HERE. NOT SURE TO REPORT ERROR ON SWAP FAILURE OR KEEP SWAPPING TILL SUCCESS
-			while (swap_pagein(iFrame, p->swap_off) != 0);
+			if (swap_pagein(iFrame, p->swap_off) != 0) {
+				perror("Fail to swap page in.");
+				exit(-1);
+			}
 		}
 		// Page invalid and not on swap
 		else {
 			init_frame(iFrame, vaddr);
 		}
-		p->frame = iFrame;
+		p->frame = iFrame << PAGE_SHIFT;
 	}
 
 	// Make sure that p is marked valid and referenced. Also mark it

@@ -43,7 +43,7 @@ int allocate_frame(pgtbl_entry_t *p) {
 		pgtbl_entry_t *victim_pgtbl = coremap[frame].pte;
 		victim_pgtbl->frame = victim_pgtbl->frame & (~PG_VALID);
 		
-		if (victim_pgtbl->frame & PG_ONSWAP) {
+		if (!(victim_pgtbl->frame & PG_ONSWAP)) {
 			// Page dirty, swap required
 			if (victim_pgtbl->frame & PG_DIRTY) {
 				off_t swap_offset;
@@ -54,13 +54,13 @@ int allocate_frame(pgtbl_entry_t *p) {
 				// Reset dirty bit
 				victim_pgtbl->frame = victim_pgtbl->frame & (~PG_DIRTY);
 				evict_dirty_count ++;
+				// Set on_swap bit
+				victim_pgtbl->frame = victim_pgtbl->frame | PG_ONSWAP;
 			}
 			// Page clean, no swap required
 			else {
 				evict_clean_count ++;
 			}
-			// Set on_swap bit
-			victim_pgtbl->frame = victim_pgtbl->frame | PG_ONSWAP;
 		}
 	}
 

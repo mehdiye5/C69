@@ -6,6 +6,7 @@
 #include "pagetable.h"
 
 
+
 extern int memsize;
 
 extern int debug;
@@ -25,7 +26,7 @@ int clock_evict() {
     
     while (1) {
         // check if clock hand is less than the end
-        if (clock <= memsize) {
+        if (clock < memsize) {
             // if this page's reference bit is set/turned on
             if (coremap[clock].pte->frame & PG_REF) {
                 //give it a second chance

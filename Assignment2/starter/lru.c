@@ -73,7 +73,7 @@ void lru_ref(pgtbl_entry_t *p) {
 		s_node* ref_node = (s_node *) malloc(sizeof(s_node));
 		ref_node->ind = ind;		
 
-		if (top == NULL) {
+		if (top == NULL || bottom == NULL) {
 			top = ref_node;
 			bottom = ref_node;
 		} else {

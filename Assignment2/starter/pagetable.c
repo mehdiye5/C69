@@ -41,7 +41,7 @@ int allocate_frame(pgtbl_entry_t *p) {
 
 		// Mark the page table for victim frame as "invalid"
 		pgtbl_entry_t *victim_pgtbl = coremap[frame].pte;
-		victim_pgtbl->frame = victim_pgtbl->frame | (~PG_VALID);
+		victim_pgtbl->frame = victim_pgtbl->frame & (~PG_VALID);
 		
 		if (victim_pgtbl->frame & PG_ONSWAP) {
 			// Page dirty, swap required
@@ -52,7 +52,7 @@ int allocate_frame(pgtbl_entry_t *p) {
 				// Update the 2nd level page table
 				victim_pgtbl->swap_off = swap_offset;
 				// Reset dirty bit
-				victim_pgtbl->frame = victim_pgtbl->frame | (~PG_DIRTY);
+				victim_pgtbl->frame = victim_pgtbl->frame & (~PG_DIRTY);
 				evict_dirty_count ++;
 			}
 			// Page clean, no swap required
@@ -156,16 +156,19 @@ char *find_physpage(addr_t vaddr, char type) {
 
 	pgtbl_entry_t *p=NULL; // pointer to the full page table entry for vaddr
 	unsigned idx = PGDIR_INDEX(vaddr); // get index into page directory
-
+	
 	// IMPLEMENTATION NEEDED
+	// Make sure the page table pointed to is valid
+	if ((pgdir[idx].pde & PG_VALID) == 0) {
+		pgdir[idx] = init_second_level();
+	} 
 	// Use top-level page directory to get the index of the 2nd-level page table
-	pgdir_entry_t pgdir_entry = pgdir[idx];
-	pgtbl_entry_t *pgtbl = (pgtbl_entry_t *)pgdir_entry.pde;
+	pgtbl_entry_t *pgtbl = (pgtbl_entry_t *)(pgdir[idx].pde & PAGE_MASK);
 
 	// Use vaddr to get index into 2nd-level page table and initialize 'p'
-	unsigned idx2 = PGTBL_INDEX(vaddr);
-	p = &(pgtbl[idx2]); //***************Is pgtbl an array? Looks like it is a pointer
-
+	idx = PGTBL_INDEX(vaddr);
+	p = &pgtbl[idx];
+	
 	// Check if p is valid or not, on swap or not, and handle appropriately
 	// Page valid
 	if (p->frame & PG_VALID) {
@@ -183,15 +186,15 @@ char *find_physpage(addr_t vaddr, char type) {
 		// Page invalid and not on swap
 		else {
 			init_frame(iFrame, vaddr);
-			p->frame = iFrame;
 		}
+		p->frame = iFrame;
 	}
 
 	// Make sure that p is marked valid and referenced. Also mark it
 	// dirty if the access type indicates that the page will be written to.
 	p->frame = p->frame | PG_VALID;
 	p->frame = p->frame | PG_REF;
-	if ((type == 'M') || (type | 'S')) {
+	if ((type == 'M') || (type == 'S')) {
 		p->frame = p->frame | PG_DIRTY;
 	}
 

@@ -1,5 +1,5 @@
-SRCS = simpleloop.c matmul.c blocked.c
-PROGS = simpleloop matmul blocked
+SRCS = simpleloop.c matmul.c blocked.c queloop.c
+PROGS = simpleloop matmul blocked queloop
 
 all : $(PROGS)
 

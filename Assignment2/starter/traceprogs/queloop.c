@@ -35,7 +35,16 @@ int main(int argc, char ** argv) {
 
     /* Markers used to bound trace regions of interest */
 	volatile char MARKER_START, MARKER_END;
-	/* Record marker addresses */
+	
+
+    /* Record marker addresses */
+	FILE* marker_fp = fopen("simpleloop.marker","w");
+	if(marker_fp == NULL ) {
+		perror("Couldn't open marker file:");
+		exit(1);
+	}
+	fprintf(marker_fp, "%p %p", &MARKER_START, &MARKER_END );
+	fclose(marker_fp);
 
     MARKER_START = 33;
     que_loop(400);

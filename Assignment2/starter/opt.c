@@ -83,10 +83,14 @@ int opt_evict() {
  * Input: The page table entry for the page that is being accessed.
  */
 void opt_ref(pgtbl_entry_t *p) {
-    addr_list *current = head;
-    head = head->next;
-    free(current);
-	return;
+    if (head != NULL) { 
+        addr_list *current = head;
+        head = head->next;
+        free(current);	    
+
+    }
+
+    return;
 }
 
 /* Initializes any data structures needed for this
@@ -117,10 +121,9 @@ void opt_init() {
                 head->vaddr = vaddr;
                 head->next = NULL;
             } else {
-                next_node->next = new;
+                next_node = new;
                 next_node->vaddr = vaddr;
                 next_node->next=NULL;
-                next_node=new;
             }
 		} else {
 			continue;

@@ -32,6 +32,15 @@ void empty_queu(int size) {
     return;
 }
 int main(int argc, char ** argv) {
+
+    /* Markers used to bound trace regions of interest */
+	volatile char MARKER_START, MARKER_END;
+	/* Record marker addresses */
+
+    MARKER_START = 33;
     que_loop(400);
     empty_queu(400);
+    MARKER_END = 34;
+
+    return 0;
 }

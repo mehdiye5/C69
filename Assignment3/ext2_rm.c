@@ -13,3 +13,10 @@ directory specified in the last argument. If "-r" is used with a regular file or
 bonus, make sure first that your ext2_rm works, then create a new copy of it and rename it to
 ext2_rm_bonus.c, and implement the additional functionality in this separate source file.
  */
+
+
+ int main ( int argc, char **argv ) {
+     printf("%d \n", argc);
+
+     return 0;
+ }

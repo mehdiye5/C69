@@ -1,8 +1,8 @@
-sim : ext2_rm.o
+sim : ext2_rm.o helper.o
 	gcc -Wall -g -o sim $^
 
-%.o : %.c helper.h ext2.h
-	gcc -Wall -g -c $<
+bin : ext2_rm.c helper.c
+	gcc -Wall -g -c $^
 
 clean:
-	rm -f *.o sim *~
+	rm *.o sim

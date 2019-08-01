@@ -1,4 +1,4 @@
-#include<stdio.>
+#include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -6,6 +6,9 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include "ext2.h"
+#include "helper.h"
+#include <libgen.h>
+#include <string.h>
 
 /*
 This program takes two command line arguments. The first is the name of an ext2 formatted
@@ -25,6 +28,11 @@ directory specified in the last argument. If "-r" is used with a regular file or
 bonus, make sure first that your ext2_rm works, then create a new copy of it and rename it to
 ext2_rm_bonus.c, and implement the additional functionality in this separate source file.
  */
+
+ /**
+ Note: most reference to understand ext2.h was done through following url http://cs.smith.edu/~nhowe/262/oldlabs/ext2.html#locate_file
+       
+  */
 
 
 
@@ -58,12 +66,37 @@ unsigned char *disk;
     // note: copied for readimage.c from provided files  from week8&9
     struct ext2_super_block *sb = (struct ext2_super_block *)(disk + 1024);
     printf("Inodes: %d\n", sb->s_inodes_count);
-    printf("Blocks: %d\n", sb->s_blocks_count);   
+    printf("Blocks: %d\n", sb->s_blocks_count); 
+
+
+    //=============testing part=============
+    struct ext2_inode *inode = get_inode(get_root_inode_number(), disk);
+
+    struct ext2_dir_entry* entry = (struct ext2_dir_entry *)(disk + EXT2_BLOCK_SIZE * inode->i_block[1]);
+
+    printf("The directory name is: %s \n", entry->name);
+    printf("Number of Blocks is: %d \n", inode->i_blocks);
+
+
+    char* local_file = "/foo/bar/baz.txt";
+
+    char* ts1 = strdup(local_file);
+    char* ts2 = strdup(local_file);
+
+    char* dir = dirname(ts1);
+    char* filename = basename(ts2);
+
+    printf("file directory is: %s \n", dir);
+    printf("file name is: %s \n", filename);
+
+
+    //======================================
+
+
 
     //locate the root inode
 
-    // check if the given directory in argv[2] is a directory or a file
-    
+    // check if the given directory in argv[2] is a directory or a file    
 
     // check if a file exists
 

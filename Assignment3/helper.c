@@ -23,6 +23,20 @@ function returns blocks group descriptor for the given image file
  }
 
 /**
+ * Function returns the block bitmap
+ */
+unsigned char *get_block_bitmap(unsigned char* disk) {
+    return (unsigned char *) (disk + EXT2_BLOCK_SIZE*(get_blocks_group_descriptor(disk)->bg_block_bitmap));
+}
+
+/**
+ * Function returns the inode bitmap
+ */
+unsigned char *get_inode_bitmap(unsigned char* disk) {
+    return (unsigned char *) (disk + EXT2_BLOCK_SIZE*(get_blocks_group_descriptor(disk)->bg_inode_bitmap));
+}
+
+/**
 function returns Inodes table block for the given image file
 Note: inodes table is found in the blocks group descriptor bg_inode_table atribute
  */

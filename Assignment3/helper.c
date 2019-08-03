@@ -57,6 +57,24 @@ char* get_file_name(char* directory) {
     return basename(copy);
 }
 
+int match_name(char *path, char* actual, int start, int last) {
+    start = start + 1; // skip the first slash '/'
+    while (*actual != '\0') {
+        // No more character in path to compare with actual
+        if (start >= last) {
+            return 0;
+        }
+        // Mismatach between two strings
+        if (path[start] != *actual) {
+            return 0;
+        }
+        start ++;
+        actual ++;
+    }
+    return 1;
+}
+
+
 /**
  * Function that parse the input path by '/', and return an array of strings,
  * each represents a directory name from the input path

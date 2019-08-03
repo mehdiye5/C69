@@ -6,5 +6,6 @@ unsigned char *get_block_bitmap(unsigned char* disk); // added in Robert's branc
 unsigned char *get_inode_bitmap(unsigned char* disk); // added in Robert's branch
 unsigned char  *get_inode_table(unsigned char* disk);
 struct ext2_inode *get_inode(int inode_number, unsigned char* disk);
+int match_name(char *path, char* actual, int start, int last); // added in Robert's branch
 char** parse_absolute_path(char* inpPath); // added in Robert's branch
 

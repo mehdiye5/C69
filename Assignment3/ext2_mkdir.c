@@ -44,6 +44,7 @@ int main ( int argc, char **argv ) {
 	   exit(1);
    }
 
+   /* --------------- Initialize relevant poitners and indices --------------- */
    // Pointer to the super block
    struct ext2_super_block *sb = (struct ext2_super_block *)(disk + EXT2_BLOCK_SIZE);
    // int inodeCount = sb->s_inodes_count;
@@ -67,17 +68,19 @@ int main ( int argc, char **argv ) {
    }
    iLastDir ++;
    // 3. iPathAnchor is the index of the current character of the input path we are looking at
-   int iPathAnchor = 0;
+   int iPathAnchor = 1; // skip the first slash '/'
    printf("iLastChar: %d, iLastDir: %d\n", iLastChar, iLastDir);
    // locate the root inode
    struct ext2_inode *currInode = get_inode(2, disk); // root inode by default is the second inode
-   struct ext2_inode *prevInode;
-   // Step to the second last directory from the given directory in argv[2]
+   //struct ext2_inode *prevInode;
+
+
+   /* -------- Step to the second last directory from the given directory in argv[2] -------- */
    while (1) {
       // The inode is a directory inode
       /* Check if the inode contains the desired name from input path */
       struct ext2_dir_entry_2 *entry;
-      struct ext2_dir_entry_2 *found;
+      struct ext2_dir_entry_2 *found = NULL;
       unsigned int size;
       unsigned char block[EXT2_BLOCK_SIZE];
       // Read the first block of the current inode
@@ -86,7 +89,8 @@ int main ( int argc, char **argv ) {
       size = 0; // Bytes read so far
       entry = (struct ext2_dir_entry_2 *) block; // entry is initialized to the first block of the current inode
       while(size < currInode->i_size) {
-         printf("in loop\n");
+         // printf("in loop: %d\n", iPathAnchor);
+         // printf("%s\n", entry->name);
          // Proceed name check only when entry is a directory
          if (entry->file_type == EXT2_FT_DIR) {
             // Get the file name of the ext2_dir_entry_2
@@ -95,26 +99,37 @@ int main ( int argc, char **argv ) {
             file_name[entry->name_len] = 0; // null char at the end
             // Directory with the desired name matched
             if (match_name(argv[2], file_name, iPathAnchor, iLastChar-1)) {
+               printf("# found file %s, inode %u #\n", file_name, entry->inode);
+               printf("------------ next round ------------\n");
                found = entry;
                iPathAnchor = iPathAnchor + entry->name_len + 1; // Update anchor of the input path
-               printf("%10u %s\n", entry->inode, file_name);
+               //printf("%10u %s\n", entry->inode, file_name);
                break;
             }
          }
          // Update relavent index
          entry = (void*) entry + entry->rec_len; // move to the next entry
          size += entry->rec_len; // update size we have read so far
+         printf("size: %d, rec_len: %d\n", size, currInode->i_size);
       }
-      // If we do not find any inode that: it is a directory inoe, and it match the name, report
+      // If we do not find any inode that: it is a directory inode and it match the name, then report
       if (found == NULL) {
-         perror("Invalid path");
+         printf("Invalid path\n");
          return -1;
       }
-      printf("iPathAnchor: %d, confirm iLastChar: %d\n", iPathAnchor, iLastChar);
-      break;
+      // If we reach the index of the last directory, exit the loop
+      if (iPathAnchor == iLastDir) {
+         printf("# Second last directory reached #\n");
+         break;
+      }
+      // Update current inode to the new inode for the upcoming iteration
+      currInode = get_inode(found->inode, disk);
+      found = NULL; // Reset found
    }
 
-   // Create a directory with name being the last directory from argv[2]
+
+   /* --------- Create a directory with name being the last directory from argv[2] --------- */
+   
     
 
    // learn which properties need to be updated when a new directory is created

@@ -56,7 +56,7 @@ int main ( int argc, char **argv ) {
    /* -------- Step to the second last directory from the given directory in argv[2] -------- */
    iNode_info *second_last_info = step_to_target(disk, fd, argv[2], 1);
    if (second_last_info == NULL) {
-      printf("! Invalid path !\n");
+      fprintf(stderr, "! Invalid path !\n");
       exit(1);
    }
    struct ext2_inode *second_last_inode = second_last_info->iNode;
@@ -81,7 +81,7 @@ int main ( int argc, char **argv ) {
             file_name[entry->name_len] = 0; // null char at the end
             // Directory with the desired name matched
             if (match_name(argv[2], file_name, iLastDir, iLastChar)) {
-               printf("Directory \"%s\" trying to create already exists\n", file_name);
+               fprintf(stderr, "Directory \"%s\" trying to create already exists\n", file_name);
                exit(1);
             }
       }
@@ -103,7 +103,7 @@ int main ( int argc, char **argv ) {
    int iInode = find_free_inode(disk);
    int iBlock = find_free_block(disk);
    if (iInode == -1 || iBlock == -1) {
-      printf("Disk space compact. Please try to clear out some space.");
+      fprintf(stderr, "Disk space compact. Please try to clear out some space.");
       exit(1);
    } else { printf("index found inode: %d, name block: %d\n", iInode, iBlock); }
    // From the index we get the pointer to the inode & block
@@ -140,7 +140,7 @@ int main ( int argc, char **argv ) {
    newInodeBlk2->name_len = 2; // The name ".." has length of 2
    memset(newInodeBlk2->name, '.', 2); // Set name of the entry
 
-   printf("# Work done #");
+   printf("# Mkdir done #");
    printInfo(disk); // debugging purpose
    return 0;
 }

@@ -100,6 +100,14 @@ Three_indices generate_position(char *path) {
     if (path[iLastChar] == '/') {
         iLastChar --;
     }
+    // Cannot generate under the case the input is the root directory
+    if (iLastChar == -1) {
+        Three_indices special_case = {
+            .anchor = -1,
+            .last_char = -1,
+            .last_dir = -1};
+        return special_case;
+    }
     // 2. iLastDir is the index of the first character of the last directory
     int iLastDir = iLastChar;
     while (path[iLastDir] != '/') {
@@ -129,6 +137,18 @@ iNode_info *step_to_target(unsigned char* disk, int fd, char *path, int flag) {
     
     // locate the root inode
     struct ext2_inode *currInode = get_inode(2, disk); // root inode by default is the second inode
+
+    if (iPathAnchor == -1) {
+        if (flag) {
+            return NULL;
+        }
+        else {
+            iNode_info *special_case = malloc(sizeof(iNode_info));
+            special_case->iNode = get_inode(2, disk);
+            special_case->iNode_number = 2;
+            return special_case;
+        }
+    }
 
     while (1) {
         // The inode is a directory inode

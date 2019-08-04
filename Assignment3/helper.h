@@ -11,6 +11,7 @@ unsigned char *get_block_bitmap(unsigned char* disk); //#
 unsigned char *get_inode_bitmap(unsigned char* disk); //#
 unsigned char  *get_inode_table(unsigned char* disk);
 struct ext2_inode *get_inode(int inode_number, unsigned char* disk);
+struct ext2_dir_entry_2 *get_block(int block_number, unsigned char* disk); //#
 
 int match_name(char *path, char* actual, int start, int last); //#
 char** parse_absolute_path(char* inpPath); //#
@@ -22,7 +23,15 @@ typedef struct Three_indices {
     int last_dir;
 } Three_indices;
 
-struct ext2_inode *step_to_second_last(unsigned char* disk, int fd, char *path); //#
+//#
+typedef struct iNode_info {
+    struct ext2_inode *iNode;
+    int iNode_number;
+} iNode_info;
+
+iNode_info *step_to_second_last(unsigned char* disk, int fd, char *path); //#
 Three_indices generate_position(char *path); //#
 int find_free_inode(unsigned char *disk); //#
+int find_free_block(unsigned char *disk); //#
+void printInfo(unsigned char *disk); //#
 

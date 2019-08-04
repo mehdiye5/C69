@@ -48,12 +48,25 @@ Note: inodes table is found in the blocks group descriptor bg_inode_table atribu
      return (unsigned char *)(disk + EXT2_BLOCK_SIZE*(get_blocks_group_descriptor(disk)->bg_inode_table));
  }
 
- /**
+/**
  function return the inode for the given inode number
-  */
-  struct ext2_inode *get_inode(int inode_number, unsigned char* disk) {
-      return (struct ext2_inode*) (get_inode_table(disk) + sizeof(struct ext2_inode)*(inode_number - 1));
-  }
+*/
+struct ext2_inode *get_inode(int inode_number, unsigned char* disk) {
+    return (struct ext2_inode*) (get_inode_table(disk) + sizeof(struct ext2_inode)*(inode_number - 1));
+}
+
+/**
+ function return the block for the given block index in the block bitmap
+*/
+struct ext2_dir_entry_2 *get_block(int block_number, unsigned char* disk) {
+    struct ext2_super_block *sb = (struct ext2_super_block *)(disk + EXT2_BLOCK_SIZE);
+    // number of inodes per block
+    unsigned int inodes_per_block = EXT2_BLOCK_SIZE / sizeof(struct ext2_inode);
+    // size in blocks of the inode table
+    unsigned int itable_blocks = sb->s_inodes_per_group / inodes_per_block;
+    return (struct ext2_dir_entry_2*) (get_inode_table(disk) + itable_blocks + EXT2_BLOCK_SIZE*(block_number - 1));
+}
+
 
 char* get_file_name(char* directory) {
     char* copy = strdup(directory);    
@@ -104,7 +117,7 @@ Three_indices generate_position(char *path) {
 /**
  * Function that step to the second last directory from the given directory
  */
-struct ext2_inode *step_to_second_last(unsigned char* disk, int fd, char *path) {
+iNode_info *step_to_second_last(unsigned char* disk, int fd, char *path) {
     Three_indices indices = generate_position(path);
     int iPathAnchor = indices.anchor;
     int iLastChar = indices.last_char;
@@ -159,7 +172,10 @@ struct ext2_inode *step_to_second_last(unsigned char* disk, int fd, char *path) 
         // If we reach the index of the last directory, exit the loop
         if (iPathAnchor == iLastDir) {
             printf("# Valid path: second last directory reached #\n");
-            return currInode;
+            iNode_info *result = malloc(sizeof(iNode_info));
+            result->iNode = currInode;
+            result->iNode_number = found->inode;
+            return result;
         }
         // Update current inode to the new inode for the upcoming iteration
         found = NULL; // Reset found
@@ -182,9 +198,9 @@ int find_free_inode(unsigned char *disk) {
     int j = 0;
     int index = -1;
     for (int i = 0; i < sb->s_inodes_count; i++) {
-        unsigned c = bmi[i / 8];                     // get the corresponding byte
+        unsigned c = bmi[i / 8]; // get the corresponding byte
         // If that bit was a 1, inode is used, continue checking.
-        if ((c & (1 << j)) == 0 && i > 10) {    // > 10 because first 11 not used
+        if ((c & (1 << j)) == 0 && i > 10) { // > 10 because first 11 are reserved
             index = i;
             break;
         }
@@ -192,7 +208,80 @@ int find_free_inode(unsigned char *disk) {
             j = 0; // increment shift index, if > 8 reset.
         }
     }
+    // Set the target inode to be all 0
+    memset(get_inode(index, disk), 0, sizeof(struct ext2_inode));
     return index;
 }
 
+/**
+ * Function that find the index of the first free block in the data blocks
+ * by traversing through the block bitmap. Will return -1 if the block
+ * table is compact (no free space for an extra inode)
+ */
+int find_free_block(unsigned char *disk) {
+    struct ext2_super_block *sb = (struct ext2_super_block *)(disk + EXT2_BLOCK_SIZE);
+    // Get inode bitmap
+    char *bmi = (char *) get_block_bitmap(disk);
+    
+    // The first 11 is reserved, so start from index 11 (the 12^th inode)
+    int j = 0;
+    int index = -1;
+    for (int i = 0; i < sb->s_blocks_count; i++) {
+        unsigned c = bmi[i / 8]; // get the corresponding byte
+        // If that bit was a 1, inode is used, continue checking.
+        if ((c & (1 << j)) == 0) {
+            index = i;
+            break;
+        }
+        if (++j == 8) {
+            j = 0; // increment shift index, if > 8 reset.
+        }
+    }
+    // Set the target block to be all 0
+    memset(get_block(index, disk), 0, EXT2_BLOCK_SIZE);
+    return index;
+}
+
+
+/**
+ * Print out the block and inode bitmaps for debugging purpose
+ */
+void printInfo(unsigned char *disk) {
+    struct ext2_super_block *sb = (struct ext2_super_block *)(disk + 1024);
+    struct   ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
+    /******************************* Block Bitmap *************************************/
+    // Get block bitmap
+    char *bm = (char *) (disk + (bgd->bg_block_bitmap * EXT2_BLOCK_SIZE));
+    // counter for shift
+    printf("block bitmap: ");
+    int index = 0;
+    for (int i = 0; i < sb->s_blocks_count; i++) {
+        unsigned c = bm[i / 8];                     // get the corresponding byte
+        printf("%d", (c & (1 << index)) > 0);       // Print the correcponding bit
+        if (++index == 8) (index = 0, printf(" ")); // increment shift index, if > 8 reset.
+    }
+    printf("\n");
+
+    /******************************* Inode Bitmap *************************************/
+    // Get inode bitmap
+    char *bmi = (char *) (disk + (bgd->bg_inode_bitmap * EXT2_BLOCK_SIZE));
+    // counter for shift
+    printf("inode bitmap: ");
+    int index2 = 0;
+    for (int i = 0; i < sb->s_inodes_count; i++) {
+        unsigned c = bmi[i / 8];                     // get the corresponding byte
+        printf("%d", (c & (1 << index2)) > 0);       // Print the correcponding bit
+        // If that bit was a 1, inode is used, store it into the array.
+        // Note, this is the index number, NOT the inode number
+        // inode number = index number + 1
+        if (++index2 == 8) (index2 = 0, printf(" ")); // increment shift index, if > 8 reset.
+    }
+    printf("\n\n");
+}
+
+/**
+ * The function take in an inode, and find the first free block inside the inode
+ */
+
+    
 

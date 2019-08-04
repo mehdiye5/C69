@@ -40,11 +40,12 @@ int main ( int argc, char **argv ) {
 	   perror("mmap");
 	   exit(1);
    }
+   printInfo(disk); // debugging purpose
 
    /* --------------- Initialize relevant poitners and indices --------------- */
    // Pointer to the super block
-   struct ext2_super_block *sb = (struct ext2_super_block *)(disk + EXT2_BLOCK_SIZE);
-   struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2*EXT2_BLOCK_SIZE);
+   // struct ext2_super_block *sb = (struct ext2_super_block *)(disk + EXT2_BLOCK_SIZE);
+   // struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2*EXT2_BLOCK_SIZE);
 
    // Relevant indices
    Three_indices indices = generate_position(argv[2]);
@@ -53,7 +54,9 @@ int main ( int argc, char **argv ) {
    int iLastDir = indices.last_dir;
 
    /* -------- Step to the second last directory from the given directory in argv[2] -------- */
-   struct ext2_inode *second_last_inode = step_to_second_last(disk, fd, argv[2]);
+   iNode_info *second_last_info = step_to_second_last(disk, fd, argv[2]);
+   struct ext2_inode *second_last_inode = second_last_info->iNode;
+   int second_last_inode_number = second_last_info->iNode_number;
    if (second_last_inode == NULL) {
       exit(1);
    }
@@ -91,15 +94,42 @@ int main ( int argc, char **argv ) {
    printf("# Path check passed: input path okay #\n");
 
    /* --------- Create a directory with name being the last directory from argv[2] --------- */
-   // Find the index of the first free inodes, check if it is a valid index
-   int i = find_free_inode(disk);
-   if (i == -1) {
+   // Get the index of the first free inode for our new directory
+   int iInode = find_free_inode(disk);
+   int iBlock = find_free_block(disk);
+   if (iInode == -1 || iBlock == -1) {
       printf("Disk space compact. Please try to clear out some space.");
       exit(1);
-   } else { printf("index found %d\n", i); }
-   // Create a new inode with name being the last directory name in the path
+   } else { printf("index found inode: %d, name block: %d\n", iInode, iBlock); }
+   // From the index we get the pointer to the inode & block
+   struct ext2_inode *newInode = get_inode(iInode, disk);
+   struct ext2_dir_entry_2 *newInodeBlk = get_block(iBlock, disk);
+   struct ext2_dir_entry_2 *newInodeBlk2 = newInodeBlk + 12; // Harded coded offset of 12
+
+   // A new directory entry needs to be created under the second last parent directory
+   // Need a free block inside the parent directory inode for this
+   int new_name_len = iLastChar - iLastDir + 1;
+   struct ext2_dir_entry_2 *newDirEtry = NULL; // TODO: implement in the helper function
+   newDirEtry->file_type = EXT2_FT_DIR; // Set type of new directory entry
+   newDirEtry->inode = iInode + 1; // Set inode number
+   newDirEtry->rec_len = new_name_len + 8; // Entry length is the length of the new directory name
+   newDirEtry->name_len = new_name_len; // The name "." has length of 1
+   memcpy(newDirEtry->name, argv[2]+iLastDir, new_name_len); // Set name of the entry
    
-   // learn which properties need to be updated when a new directory is created
+   // Set attributes in the inode and its directory entries
+   (newInode->i_block)[0] = newInodeBlk; // TODO: ensure this is fine
+   
+   newInodeBlk->file_type = EXT2_FT_DIR; // Set type of new directory entry
+   newInodeBlk->inode = iInode + 1; // Set inode number
+   newInodeBlk->rec_len = 12; // Hard-coded length 12 for self directory entry "."
+   newInodeBlk->name_len = 1; // The name "." has length of 1
+   memset(newInodeBlk->name, '.', 1); // Set name of the entry
+
+   newInodeBlk2->file_type = EXT2_FT_DIR; // Set type of new directory entry
+   newInodeBlk2->inode = second_last_inode_number + 1; // Set inode number
+   newInodeBlk2->rec_len = 12; // Hard-coded length 12 for parent directory entry "."
+   newInodeBlk2->name_len = 2; // The name ".." has length of 2
+   memset(newInodeBlk2->name, '.', 2); // Set name of the entry
 
    return 0;
 }

@@ -44,8 +44,8 @@ int main ( int argc, char **argv ) {
 
    /* --------------- Initialize relevant poitners and indices --------------- */
    // Pointer to the super block
-   // struct ext2_super_block *sb = (struct ext2_super_block *)(disk + EXT2_BLOCK_SIZE);
-   // struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2*EXT2_BLOCK_SIZE);
+   struct ext2_super_block *sb = (struct ext2_super_block *)(disk + EXT2_BLOCK_SIZE);
+   struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2*EXT2_BLOCK_SIZE);
 
    // Relevant indices
    Three_indices indices = generate_position(argv[2]);
@@ -103,9 +103,9 @@ int main ( int argc, char **argv ) {
    int iInode = find_free_inode(disk);
    int iBlock = find_free_block(disk);
    if (iInode == -1 || iBlock == -1) {
-      fprintf(stderr, "Disk space compact. Please try to clear out some space.");
+      fprintf(stderr, "Disk compact.");
       exit(1);
-   } else { printf("index found inode: %d, name block: %d\n", iInode, iBlock); }
+   } else { printf("Inode index found: %d, name block: %d\n", iInode, iBlock); }
    // From the index we get the pointer to the inode & block
    struct ext2_inode *newInode = get_inode(iInode, disk);
    struct ext2_dir_entry_2 *newInodeBlk = get_block(iBlock, disk);
@@ -119,7 +119,7 @@ int main ( int argc, char **argv ) {
    printf("here\n");
    fflush(stdout);
    newDirEtry->inode = iInode + 1; // Set inode number
-   newDirEtry->rec_len = new_name_len + 8; // Entry length is the length of the new directory name
+   newDirEtry->rec_len = new_name_len + 8; // TODO: check if the rec_len here is fine. Entry length is the length of the new directory name
    newDirEtry->name_len = new_name_len; // The name "." has length of 1
    memcpy(newDirEtry->name, argv[2]+iLastDir, new_name_len); // Set name of the entry
    
@@ -127,6 +127,7 @@ int main ( int argc, char **argv ) {
 
    // Set attributes in the inode and its directory entries
    (newInode->i_block)[0] = newInodeBlk; // TODO: ensure this is fine
+   newInode->i_mode = EXT2_S_IFREG;
    
    newInodeBlk->file_type = EXT2_FT_DIR; // Set type of new directory entry
    newInodeBlk->inode = iInode + 1; // Set inode number
@@ -139,6 +140,13 @@ int main ( int argc, char **argv ) {
    newInodeBlk2->rec_len = 12; // Hard-coded length 12 for parent directory entry "."
    newInodeBlk2->name_len = 2; // The name ".." has length of 2
    memset(newInodeBlk2->name, '.', 2); // Set name of the entry
+
+   bgd->bg_used_dirs_count ++;
+   bgd->bg_free_inodes_count --;
+   bgd->bg_free_blocks_count --;
+   sb->s_free_inodes_count --;
+   bgd->bg_free_blocks_count --;
+
 
    printf("# Mkdir done #");
    printInfo(disk); // debugging purpose

@@ -41,17 +41,18 @@ int main ( int argc, char **argv ) {
     }
     printInfo(disk); // debugging purpose
 
+    // Open the input file
     FILE *fp = fopen(argv[2], "r");
     if(fp == NULL) {
 		fprintf(stderr, "File path on OS is invalid\n");
 		exit(1);
 	}
 
-    // Relevant indices
-    Three_indices exIndices = generate_position(argv[3]);
-    //int iPathAnchor = indices.anchor;
-    int iExLastChar = exIndices.last_char;
-    int iExLastDir = exIndices.last_dir;
+    // // Relevant indices
+    // Three_indices exIndices = generate_position(argv[3]);
+    // //int iPathAnchor = indices.anchor;
+    // int iExLastChar = exIndices.last_char;
+    // int iExLastDir = exIndices.last_dir;
 
     // Step the directory where the file will be copies
     iNode_info *last_info = step_to_target(disk, fd, argv[3], 0);
@@ -98,6 +99,87 @@ int main ( int argc, char **argv ) {
     // Function does not exit in the above loop --> path okay
     printf("# Path check passed: input path okay #\n");
 
+
+    /* ----------------- Load the file information into the inode blocks --------------------------*/
+    // Index of a free inode
+    int iInode = find_free_inode(disk);
+    if (iInode == -1) {
+        fprintf(stderr, "Disk compact.");
+        exit(1);
+    } else { printf("Inode index found: %d\n", iInode); }
+    // Pointer to the free inode
+    struct ext2_inode *newInode = get_inode(iInode, disk);
+    newInode->i_mode = EXT2_S_IFREG;
+    
+    // Directory entry for the free inode
+    struct ext2_dir_entry_2 *newFileEtry = NULL; // TODO: implement in the helper function
+    // Set relevant attributes
+    newFileEtry->file_type = EXT2_FT_REG_FILE;
+    newFileEtry->inode = iInode + 1;
+    int new_name_len = iOsLastChar - iOsLastDir + 1;
+    newFileEtry->rec_len = new_name_len + 8; // TODO: check if the rec_len here is fine. Entry length is the length of the new directory name
+    newFileEtry->name_len = new_name_len;
+    memcpy(newFileEtry->name, argv[2]+iOsLastDir, new_name_len);
+    
+    // Total number of blocks needed for the file
+    fseek(fp, 0, SEEK_END);
+	int blocks_needed = ftell(fp) / EXT2_BLOCK_SIZE + 1; // Round up the result
+    rewind(fp);
+    
+    // Fill the first 12 direct blocks
+    for (int i = 0; i < 12; i ++) {
+        // Stop loading when no more blocks are needed
+        if (blocks_needed == 0) {
+            printf("Direct blocks are good enough");
+            break;
+        }
+        // Find a free block
+        int iBlock = find_free_block(disk);
+        if (iBlock == -1) {
+            fprintf(stderr, "Disk compact.");
+            exit(1);
+        }
+        struct ext2_dir_entry_2*newInodeBlk = get_block(iBlock, disk);
+        // TODO: figure out what type is stored in i_block
+        (newInode->i_block)[i] = newInodeBlk;
+        // Load the file data to the block
+        fread(newInodeBlk, EXT2_BLOCK_SIZE, 1, fp);
+        // Decrement the remaining required blocks count
+        blocks_needed--;
+    }
+
+    // Single redirection if direct blocks are not good enough
+    if (blocks_needed != 0) {
+        int indirect = find_free_block(disk);
+        (newInode->i_block)[12] = indirect;
+        // Get pointer to the indirect block
+        for (int i = 0; i < 225; i ++) {
+            // Stop loading when no more blocks are needed
+            if (blocks_needed == 0) {
+                printf("Direct blocks are good enough");
+                break;
+            }
+            // Find a free block
+            int iBlock = find_free_block(disk);
+            if (iBlock == -1) {
+                fprintf(stderr, "Disk compact.");
+                exit(1);
+            }
+            struct ext2_dir_entry_2*newInodeBlk = get_block(iBlock, disk);
+            (newInode->i_block)[i] = newInodeBlk;
+            // Load the file data to the block
+            fread(newInodeBlk, EXT2_BLOCK_SIZE, 1, fp);
+            // Decrement the remaining required blocks count
+            blocks_needed--;
+        }
+    }
+
+    if (blocks_needed != 0) {
+        fprintf(stderr, "File size too big");
+        exit(1);
+    }
+
+    printf("work done");
 
 
 }

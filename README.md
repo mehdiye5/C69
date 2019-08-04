@@ -6,3 +6,9 @@
 - Robert will be imple,emting ext2'_'cp.c and ext2'_'mkdir.c
 - Greg will be implementing ext2'_'rm.c and ext2'_'rm'_'bonus.c
 - All code must be commented and fully tested before submiting it to the master branch
+
+### Usefull Tips
+to mount .img file
+- first create img folder  in home directory "mkdir ~/img"
+- then type "sudo mount -t ext2 filename.img ~/img -o loop"
+- to do this you'll need root access, so you can't do this on mathlab computers

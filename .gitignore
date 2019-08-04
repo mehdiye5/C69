@@ -5,4 +5,6 @@
 /.vscode
 /Assignment1/.vscode
 >>>>>>> 2059c4ca9c88b0b3d1c815e23ec8055620b6b800
-/Assignment\ 3/*.pdf
+/Assignment3/*.pdf
+/Assignment3/temp
+/Assignment3/temp/*

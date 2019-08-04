@@ -20,7 +20,11 @@ out data blocks, must set i_dtime in the inode, removing a directory entry need 
 entries after the one being deleted, etc.)
 __       __
   \(*_*)/
+<<<<<<< HEAD
         
+=======
+     
+>>>>>>> c1b1fbcb5d4c2211b5f50a72cbceef3358b2f9eb
 Bonus(5% extra): Implement an additional "-r" flag (after the disk image argument), which allows
 removing directories as well. In this case, you will have to recursively remove all the contents of the
 directory specified in the last argument. If "-r" is used with a regular file or link, then it should be ignored
@@ -75,6 +79,7 @@ unsigned char *disk;
 
     //=============testing part=============
     struct ext2_inode *inode = get_inode(get_root_inode_number(), disk);
+<<<<<<< HEAD
     
 
     
@@ -147,6 +152,25 @@ unsigned char *disk;
 
     // printf("file directory is: %s \n", dir);
     // printf("file name is: %s \n", filename);
+=======
+
+    struct ext2_dir_entry* entry = (struct ext2_dir_entry *)(disk + EXT2_BLOCK_SIZE * inode->i_block[1]);
+
+    printf("The directory name is: %s \n", entry->name);
+    printf("Number of Blocks is: %d \n", inode->i_blocks);
+
+
+    char* local_file = "/foo/bar/baz.txt";
+
+    char* ts1 = strdup(local_file);
+    char* ts2 = strdup(local_file);
+
+    char* dir = dirname(ts1);
+    char* filename = basename(ts2);
+
+    printf("file directory is: %s \n", dir);
+    printf("file name is: %s \n", filename);
+>>>>>>> c1b1fbcb5d4c2211b5f50a72cbceef3358b2f9eb
 
 
     //======================================

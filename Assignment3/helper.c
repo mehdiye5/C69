@@ -74,6 +74,8 @@ char* get_file_name(char* directory) {
 }
 
 int match_name(char *path, char* actual, int start, int last) {
+    // printf("path: %s, actual: %s\n", path, actual);
+    // printf("start: %d, last: %d\n", start, last);
     //printf("start: %d, last: %d \n", start, last);
     while (*actual != '\0') {
         // No more character in path to compare with actual
@@ -116,8 +118,10 @@ Three_indices generate_position(char *path) {
 
 /**
  * Function that step to the second last directory from the given directory
+ * - When flag is 0, it will step to the last directory
+ * - When flag is 1, it will step to the second last directory
  */
-iNode_info *step_to_second_last(unsigned char* disk, int fd, char *path) {
+iNode_info *step_to_target(unsigned char* disk, int fd, char *path, int flag) {
     Three_indices indices = generate_position(path);
     int iPathAnchor = indices.anchor;
     int iLastChar = indices.last_char;
@@ -148,7 +152,7 @@ iNode_info *step_to_second_last(unsigned char* disk, int fd, char *path) {
                 memcpy(file_name, entry->name, entry->name_len);
                 file_name[entry->name_len] = 0; // null char at the end
                 // Directory with the desired name matched
-                if (match_name(path, file_name, iPathAnchor, iLastChar-1)) {
+                if (match_name(path, file_name, iPathAnchor, iLastChar)) {
                     printf("# found file %s, inode %u #\n", file_name, entry->inode);
                     printf("------------ next round ------------\n");
                     found = entry;
@@ -166,12 +170,11 @@ iNode_info *step_to_second_last(unsigned char* disk, int fd, char *path) {
         }
         // If we do not find any inode that: it is a directory inode and it match the name, then complain
         if (found == NULL) {
-            printf("! Invalid path !\n");
             return NULL;
         }
         // If we reach the index of the last directory, exit the loop
-        if (iPathAnchor == iLastDir) {
-            printf("# Valid path: second last directory reached #\n");
+        if ((flag == 1 && iPathAnchor == iLastDir) || (flag == 0 && iPathAnchor == iLastChar+2)) {
+            printf("# Valid path: target directory reached #\n");
             iNode_info *result = malloc(sizeof(iNode_info));
             result->iNode = currInode;
             result->iNode_number = found->inode;

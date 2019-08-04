@@ -29,7 +29,7 @@ typedef struct iNode_info {
     int iNode_number;
 } iNode_info;
 
-iNode_info *step_to_second_last(unsigned char* disk, int fd, char *path); //#
+iNode_info *step_to_target(unsigned char* disk, int fd, char *path, int flag); //#
 Three_indices generate_position(char *path); //#
 int find_free_inode(unsigned char *disk); //#
 int find_free_block(unsigned char *disk); //#

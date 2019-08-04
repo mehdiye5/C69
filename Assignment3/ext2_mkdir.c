@@ -54,12 +54,13 @@ int main ( int argc, char **argv ) {
    int iLastDir = indices.last_dir;
 
    /* -------- Step to the second last directory from the given directory in argv[2] -------- */
-   iNode_info *second_last_info = step_to_second_last(disk, fd, argv[2]);
-   struct ext2_inode *second_last_inode = second_last_info->iNode;
-   int second_last_inode_number = second_last_info->iNode_number;
-   if (second_last_inode == NULL) {
+   iNode_info *second_last_info = step_to_target(disk, fd, argv[2], 1);
+   if (second_last_info == NULL) {
+      printf("! Invalid path !\n");
       exit(1);
    }
+   struct ext2_inode *second_last_inode = second_last_info->iNode;
+   int second_last_inode_number = second_last_info->iNode_number;
 
    /* --------------------- Check if the directory creating exists --------------------------*/
    // Check one more round to see if the directory we are creating exists in the current directory inode
@@ -79,7 +80,7 @@ int main ( int argc, char **argv ) {
             memcpy(file_name, entry->name, entry->name_len);
             file_name[entry->name_len] = 0; // null char at the end
             // Directory with the desired name matched
-            if (match_name(argv[2], file_name, iLastDir, iLastChar-1)) {
+            if (match_name(argv[2], file_name, iLastDir, iLastChar)) {
                printf("Directory \"%s\" trying to create already exists\n", file_name);
                exit(1);
             }
@@ -92,6 +93,10 @@ int main ( int argc, char **argv ) {
    }
    // Function does not exit in the above loop --> path okay
    printf("# Path check passed: input path okay #\n");
+
+
+   /* The program has been tested till this point */
+
 
    /* --------- Create a directory with name being the last directory from argv[2] --------- */
    // Get the index of the first free inode for our new directory
@@ -111,11 +116,15 @@ int main ( int argc, char **argv ) {
    int new_name_len = iLastChar - iLastDir + 1;
    struct ext2_dir_entry_2 *newDirEtry = NULL; // TODO: implement in the helper function
    newDirEtry->file_type = EXT2_FT_DIR; // Set type of new directory entry
+   printf("here\n");
+   fflush(stdout);
    newDirEtry->inode = iInode + 1; // Set inode number
    newDirEtry->rec_len = new_name_len + 8; // Entry length is the length of the new directory name
    newDirEtry->name_len = new_name_len; // The name "." has length of 1
    memcpy(newDirEtry->name, argv[2]+iLastDir, new_name_len); // Set name of the entry
    
+   
+
    // Set attributes in the inode and its directory entries
    (newInode->i_block)[0] = newInodeBlk; // TODO: ensure this is fine
    
@@ -131,5 +140,7 @@ int main ( int argc, char **argv ) {
    newInodeBlk2->name_len = 2; // The name ".." has length of 2
    memset(newInodeBlk2->name, '.', 2); // Set name of the entry
 
+   printf("# Work done #");
+   printInfo(disk); // debugging purpose
    return 0;
 }

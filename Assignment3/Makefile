@@ -10,5 +10,11 @@ binMkdir : ext2_mkdir.c helper.c
 mkdir: ext2_mkdir.o helper.o
 	gcc -Wall -g -o ext2_mkdir $^
 
+binCp : ext2_cp.c helper.c
+	gcc -Wall -g -c $^
+
+cp: ext2_cp.o helper.o
+	gcc -Wall -g -o ext2_cp $^
+
 clean:
 	rm *.o sim

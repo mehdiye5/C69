@@ -64,7 +64,7 @@ int match_name(char *path, char* actual, int start, int last) {
     //printf("start: %d, last: %d \n", start, last);
     while (*actual != '\0') {
         // No more character in path to compare with actual
-        if (start >= last) {
+        if (start > last) {
             return 0;
         }
         // Mismatach between two strings
@@ -93,7 +93,6 @@ Three_indices generate_position(char *path) {
     iLastDir ++;
     // 3. iPathAnchor is the index of the current character of the input path we are looking at
     int iPathAnchor = 1; // skip the first slash '/'
-    printf("iLastChar: %d, iLastDir: %d\n", iLastChar, iLastDir);
     Three_indices result = {
         .anchor = iPathAnchor,
         .last_char = iLastChar,
@@ -154,7 +153,7 @@ struct ext2_inode *step_to_second_last(unsigned char* disk, int fd, char *path) 
         }
         // If we do not find any inode that: it is a directory inode and it match the name, then complain
         if (found == NULL) {
-            printf("Invalid path\n");
+            printf("! Invalid path !\n");
             return NULL;
         }
         // If we reach the index of the last directory, exit the loop

@@ -89,11 +89,16 @@ int main ( int argc, char **argv ) {
    }
    // Function does not exit in the above loop --> path okay
    printf("# Path check passed: input path okay #\n");
-   
+
    /* --------- Create a directory with name being the last directory from argv[2] --------- */
-
-
-
+   // Find the index of the first free inodes, check if it is a valid index
+   int i = find_free_inode(disk);
+   if (i == -1) {
+      printf("Disk space compact. Please try to clear out some space.");
+      exit(1);
+   } else { printf("index found %d\n", i); }
+   // Create a new inode with name being the last directory name in the path
+   
    // learn which properties need to be updated when a new directory is created
 
    return 0;

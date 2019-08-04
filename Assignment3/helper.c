@@ -168,3 +168,31 @@ struct ext2_inode *step_to_second_last(unsigned char* disk, int fd, char *path) 
 }
 
 
+/**
+ * Function that find the index of the first free inode in the inode table
+ * by traversing through the inode bitmap. Will return -1 if the inode
+ * table is compact (no free space for an extra inode)
+ */
+int find_free_inode(unsigned char *disk) {
+    struct ext2_super_block *sb = (struct ext2_super_block *)(disk + EXT2_BLOCK_SIZE);
+    // Get inode bitmap
+    char *bmi = (char *) get_inode_bitmap(disk);
+    
+    // The first 11 is reserved, so start from index 11 (the 12^th inode)
+    int j = 0;
+    int index = -1;
+    for (int i = 0; i < sb->s_inodes_count; i++) {
+        unsigned c = bmi[i / 8];                     // get the corresponding byte
+        // If that bit was a 1, inode is used, continue checking.
+        if ((c & (1 << j)) == 0 && i > 10) {    // > 10 because first 11 not used
+            index = i;
+            break;
+        }
+        if (++j == 8) {
+            j = 0; // increment shift index, if > 8 reset.
+        }
+    }
+    return index;
+}
+
+

@@ -24,4 +24,5 @@ typedef struct Three_indices {
 
 struct ext2_inode *step_to_second_last(unsigned char* disk, int fd, char *path); //#
 Three_indices generate_position(char *path); //#
+int find_free_inode(unsigned char *disk); //#
 

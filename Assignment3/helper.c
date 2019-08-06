@@ -59,7 +59,7 @@ struct ext2_inode *get_inode(int inode_number, unsigned char* disk) {
  function return the block for the given block index in the block bitmap
 */
 unsigned char *get_block(int block_number, unsigned char* disk) {
-    return disk + block_number * EXT2_BLOCK_SIZE;
+    return disk + (block_number-1) * EXT2_BLOCK_SIZE;
 }
 
 
@@ -300,9 +300,11 @@ int find_spot_for_inode_entry(int inode_number, unsigned char *disk) {
                 return -1;
             }
             inode->i_block[i] = new_allocated;
-            return new_allocated;
+            // TODO: flip the bit
+            return new_allocated + 1;
         }
         if (is_block_free(curr_block_number, disk)) {
+            // TODO: flip the bit
             return curr_block_number;
         }
     }
@@ -316,9 +318,11 @@ int find_spot_for_inode_entry(int inode_number, unsigned char *disk) {
                 return -1;
             }
             indirect_blk[i] = new_allocated;
-            return new_allocated;
+            // TODO: flip the bit
+            return new_allocated + 1;
         }
         if (is_block_free(curr_block_number, disk)) {
+            // TODO: flip the bit
             return curr_block_number;
         }
     }

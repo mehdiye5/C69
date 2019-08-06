@@ -101,41 +101,48 @@ int main ( int argc, char **argv ) {
    /* --------- Create a directory with name being the last directory from argv[2] --------- */
    // Get the index of the first free inode for our new directory
    int iInode = find_free_inode(disk);
-   int iBlock = find_free_block(disk);
-   if (iInode == -1 || iBlock == -1) {
+   if (iInode == -1) {
       fprintf(stderr, "Disk compact.");
       exit(1);
-   } else { printf("Inode index found: %d, name block: %d\n", iInode, iBlock); }
-   // From the index we get the pointer to the inode & block
-   struct ext2_inode *newInode = get_inode(iInode, disk);
-   struct ext2_dir_entry_2 *newInodeBlk = (struct ext2_dir_entry_2 *)get_block(iBlock, disk);
-   struct ext2_dir_entry_2 *newInodeBlk2 = newInodeBlk + 12; // Harded coded offset of 12
-
+   }
+   struct ext2_inode *newInode = get_inode(iInode + 1, disk);
+   printf("Inode free at index %d\n", iInode);
+   
    // A new directory entry needs to be created under the second last parent directory
    // Need a free block inside the parent directory inode for this
    int new_name_len = iLastChar - iLastDir + 1;
    int newDirEtryNum = find_spot_for_inode_entry(second_last_inode_number, disk);
    struct ext2_dir_entry_2 *newDirEtry = (struct ext2_dir_entry_2 *)get_block(newDirEtryNum, disk); // TODO: implement in the helper function
-   newDirEtry->file_type = EXT2_FT_DIR; // Set type of new directory entry
-   newDirEtry->inode = iInode + 1; // Set inode number
-   newDirEtry->rec_len = new_name_len + 8; // TODO: check if the rec_len here is fine. Entry length is the length of the new directory name
-   newDirEtry->name_len = new_name_len; // The name "." has length of 1
+   printf("Parent entry for inode in block number %d\n", newDirEtryNum);
+   newDirEtry->file_type = EXT2_FT_DIR;
+   newDirEtry->inode = iInode + 1;
+   newDirEtry->rec_len = new_name_len + 8; // TODO: check if the rec_len here is fine.
+   newDirEtry->name_len = new_name_len;
    memcpy(newDirEtry->name, argv[2]+iLastDir, new_name_len); // Set name of the entry
    
-
+   // From the index we get the pointer to the inode & block
+   
+   int iBlock = find_free_block(disk);
+   if (iBlock == -1) {
+      fprintf(stderr, "Disk compact.");
+      exit(1);
+   }
+   struct ext2_dir_entry_2 *newInodeBlk = (struct ext2_dir_entry_2 *)get_block(iBlock+1, disk);
+   struct ext2_dir_entry_2 *newInodeBlk2 = newInodeBlk + 12; // Harded coded offset of 12
+   printf("Inode's block free at index %d\n", iBlock);
    // Set attributes in the inode and its directory entries
    (newInode->i_block)[0] = iBlock;
    newInode->i_mode = EXT2_S_IFREG;
-   
-   newInodeBlk->file_type = EXT2_FT_DIR; // Set type of new directory entry
-   newInodeBlk->inode = iInode + 1; // Set inode number
+
+   newInodeBlk->file_type = EXT2_FT_DIR;
+   newInodeBlk->inode = iInode + 1;
    newInodeBlk->rec_len = 12; // Hard-coded length 12 for self directory entry "."
-   newInodeBlk->name_len = 1; // The name "." has length of 1
+   newInodeBlk->name_len = 1;
    memset(newInodeBlk->name, '.', 1); // Set name of the entry
 
-   newInodeBlk2->file_type = EXT2_FT_DIR; // Set type of new directory entry
-   newInodeBlk2->inode = second_last_inode_number + 1; // Set inode number
-   newInodeBlk2->rec_len = 12; // Hard-coded length 12 for parent directory entry "."
+   newInodeBlk2->file_type = EXT2_FT_DIR;
+   newInodeBlk2->inode = second_last_inode_number + 1;
+   newInodeBlk2->rec_len = 12; // Hard-coded length 12 for parent directory entry ".."
    newInodeBlk2->name_len = 2; // The name ".." has length of 2
    memset(newInodeBlk2->name, '.', 2); // Set name of the entry
 
@@ -143,11 +150,13 @@ int main ( int argc, char **argv ) {
    bgd->bg_free_inodes_count --;
    bgd->bg_free_blocks_count --;
    sb->s_free_inodes_count --;
-   bgd->bg_free_blocks_count --;
+   sb->s_free_blocks_count --;
    update_inode_bitmap(1, iInode, disk);
 
 
    printf("# Mkdir done #\n");
    printInfo(disk); // debugging purpose
+   struct ext2_dir_entry_2* result = (struct ext2_dir_entry_2*)get_block(newDirEtryNum, disk);
+   printf("%s\n", result->name);
    return 0;
 }

@@ -40,6 +40,9 @@ int main ( int argc, char **argv ) {
         exit(1);
     }
     printInfo(disk); // debugging purpose
+    // Pointer to the super block
+   struct ext2_super_block *sb = (struct ext2_super_block *)(disk + EXT2_BLOCK_SIZE);
+   struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2*EXT2_BLOCK_SIZE);
 
     // Open the input file
     FILE *fp = fopen(argv[2], "r");
@@ -100,6 +103,7 @@ int main ( int argc, char **argv ) {
     printf("# Path check passed: input path okay #\n");
 
 
+
     /* ----------------- Load the file information into the inode blocks --------------------------*/
     // Index of a free inode
     int iInode = find_free_inode(disk);
@@ -108,7 +112,7 @@ int main ( int argc, char **argv ) {
         exit(1);
     } else { printf("Inode index found: %d\n", iInode); }
     // Pointer to the free inode
-    struct ext2_inode *newInode = get_inode(iInode, disk);
+    struct ext2_inode *newInode = get_inode(iInode + 1, disk);
     newInode->i_mode = EXT2_S_IFREG;
     
     // Directory entry for the free inode
@@ -142,7 +146,7 @@ int main ( int argc, char **argv ) {
         }
         // TODO: figure out what type is stored in i_block
         (newInode->i_block)[i] = iBlock;
-        struct ext2_dir_entry_2*newInodeBlk = (struct ext2_dir_entry_2 *)get_block(iBlock, disk);
+        struct ext2_dir_entry_2*newInodeBlk = (struct ext2_dir_entry_2 *)get_block(iBlock+1, disk);
         // Load the file data to the block
         fread(newInodeBlk, EXT2_BLOCK_SIZE, 1, fp);
         // Decrement the remaining required blocks count
@@ -165,7 +169,7 @@ int main ( int argc, char **argv ) {
                 fprintf(stderr, "Disk compact.");
                 exit(1);
             }
-            struct ext2_dir_entry_2*newInodeBlk = (struct ext2_dir_entry_2 *)get_block(iBlock, disk);
+            struct ext2_dir_entry_2*newInodeBlk = (struct ext2_dir_entry_2 *)get_block(iBlock+1, disk);
             (newInode->i_block)[i] = iBlock;
             // Load the file data to the block
             fread(newInodeBlk, EXT2_BLOCK_SIZE, 1, fp);
@@ -181,7 +185,14 @@ int main ( int argc, char **argv ) {
         exit(1);
     }
 
-    printf("work done");
+    bgd->bg_used_dirs_count ++;
+    bgd->bg_free_inodes_count --;
+    bgd->bg_free_blocks_count --;
+    sb->s_free_inodes_count --;
+    sb->s_free_blocks_count --;
 
+    printf("cp done");
+
+    return 0;
 
 }

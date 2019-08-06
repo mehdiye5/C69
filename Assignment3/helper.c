@@ -58,13 +58,8 @@ struct ext2_inode *get_inode(int inode_number, unsigned char* disk) {
 /**
  function return the block for the given block index in the block bitmap
 */
-struct ext2_dir_entry_2 *get_block(int block_number, unsigned char* disk) {
-    struct ext2_super_block *sb = (struct ext2_super_block *)(disk + EXT2_BLOCK_SIZE);
-    // number of inodes per block
-    unsigned int inodes_per_block = EXT2_BLOCK_SIZE / sizeof(struct ext2_inode);
-    // size in blocks of the inode table
-    unsigned int itable_blocks = sb->s_inodes_per_group / inodes_per_block;
-    return (struct ext2_dir_entry_2*) (get_inode_table(disk) + itable_blocks + EXT2_BLOCK_SIZE*(block_number - 1));
+unsigned char *get_block(int block_number, unsigned char* disk) {
+    return disk + block_number * EXT2_BLOCK_SIZE;
 }
 
 
@@ -246,7 +241,6 @@ int find_free_block(unsigned char *disk) {
     // Get inode bitmap
     char *bmi = (char *) get_block_bitmap(disk);
     
-    // The first 11 is reserved, so start from index 11 (the 12^th inode)
     int j = 0;
     int index = -1;
     for (int i = 0; i < sb->s_blocks_count; i++) {
@@ -263,6 +257,86 @@ int find_free_block(unsigned char *disk) {
     // Set the target block to be all 0
     memset(get_block(index, disk), 0, EXT2_BLOCK_SIZE);
     return index;
+}
+
+/**
+ * Check if the block with number=block_number is free
+ */
+int is_block_free(int block_number, unsigned char *disk) {
+    struct ext2_super_block *sb = (struct ext2_super_block *)(disk + EXT2_BLOCK_SIZE);
+    // Get inode bitmap
+    char *bmi = (char *) get_block_bitmap(disk);
+    
+    // The first 11 is reserved, so start from index 11 (the 12^th inode)
+    int j = 0;
+    int index = -1;
+    for (int i = 0; i < sb->s_blocks_count; i++) {
+        // Reaching the input block number
+        if (i == block_number - 1) {
+            unsigned c = bmi[i / 8]; // get the corresponding byte
+            // If the byte is 0, the block is free
+            return ((c & (1 << j)) == 0);
+        }
+        if (++j == 8) {
+            j = 0; // increment shift index, if > 8 reset.
+        }
+    }
+    // Set the target block to be all 0
+    memset(get_block(index, disk), 0, EXT2_BLOCK_SIZE);
+    return index;
+}
+
+/**
+ * Find the block number of first free block that belongs to an inode's i_block field
+ */
+int find_spot_for_inode_entry(int inode_number, unsigned char *disk) {
+    struct ext2_inode *inode = get_inode(inode_number, disk);
+    
+    for (int i = 0; i < 12; i ++) {
+        int curr_block_number = inode->i_block[i];
+        if (curr_block_number == 0) {
+            int new_allocated = find_free_block(disk);
+            if (new_allocated == -1) {
+                return -1;
+            }
+            inode->i_block[i] = new_allocated;
+            return new_allocated;
+        }
+        if (is_block_free(curr_block_number, disk)) {
+            return curr_block_number;
+        }
+    }
+    // Direct blocks not free
+    int *indirect_blk = (int *)(disk + (inode->i_block)[12] * EXT2_BLOCK_SIZE);
+    for (int i = 0; i < 225; i ++) {
+        int curr_block_number = indirect_blk[i];
+        if (curr_block_number == 0) {
+            int new_allocated = find_free_block(disk);
+            if (new_allocated == -1) {
+                return -1;
+            }
+            indirect_blk[i] = new_allocated;
+            return new_allocated;
+        }
+        if (is_block_free(curr_block_number, disk)) {
+            return curr_block_number;
+        }
+    }
+    // No free block under direct and first-level indirect
+    return -1;
+}
+
+void update_inode_bitmap (int binary_state, int inode_number, unsigned char *disk) {
+    // struct ext2_super_block *sb = (struct ext2_super_block *)(disk + EXT2_BLOCK_SIZE);
+    // // Get inode bitmap
+    // char *bmi = (char *) get_inode_bitmap(disk);
+    // if (binary_state == 1) {
+    //     bmi |= 1UL << (inode_number-1);
+    //     return;
+    // }
+    // if (binary_state = 0) {
+    //     bmi &= ~(1UL << (inode_number-1));
+    // }
 }
 
 
@@ -302,9 +376,7 @@ void printInfo(unsigned char *disk) {
     printf("\n\n");
 }
 
-/**
- * The function take in an inode, and find the first free block inside the inode
- */
+
 
     
 

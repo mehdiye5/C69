@@ -112,7 +112,8 @@ int main ( int argc, char **argv ) {
     newInode->i_mode = EXT2_S_IFREG;
     
     // Directory entry for the free inode
-    struct ext2_dir_entry_2 *newFileEtry = NULL; // TODO: implement in the helper function
+    int newFileEtryNum = find_spot_for_inode_entry(last_inode_number, disk);
+    struct ext2_dir_entry_2 *newFileEtry = (struct ext2_dir_entry_2 *)get_block(newFileEtryNum, disk); // TODO: implement in the helper function
     // Set relevant attributes
     newFileEtry->file_type = EXT2_FT_REG_FILE;
     newFileEtry->inode = iInode + 1;
@@ -139,9 +140,9 @@ int main ( int argc, char **argv ) {
             fprintf(stderr, "Disk compact.");
             exit(1);
         }
-        struct ext2_dir_entry_2*newInodeBlk = get_block(iBlock, disk);
         // TODO: figure out what type is stored in i_block
-        (newInode->i_block)[i] = newInodeBlk;
+        (newInode->i_block)[i] = iBlock;
+        struct ext2_dir_entry_2*newInodeBlk = (struct ext2_dir_entry_2 *)get_block(iBlock, disk);
         // Load the file data to the block
         fread(newInodeBlk, EXT2_BLOCK_SIZE, 1, fp);
         // Decrement the remaining required blocks count
@@ -150,8 +151,7 @@ int main ( int argc, char **argv ) {
 
     // Single redirection if direct blocks are not good enough
     if (blocks_needed != 0) {
-        int indirect = find_free_block(disk);
-        (newInode->i_block)[12] = indirect;
+        int *indirect_blk = (int *)(disk + (newInode->i_block)[12] * EXT2_BLOCK_SIZE);
         // Get pointer to the indirect block
         for (int i = 0; i < 225; i ++) {
             // Stop loading when no more blocks are needed
@@ -165,10 +165,12 @@ int main ( int argc, char **argv ) {
                 fprintf(stderr, "Disk compact.");
                 exit(1);
             }
-            struct ext2_dir_entry_2*newInodeBlk = get_block(iBlock, disk);
-            (newInode->i_block)[i] = newInodeBlk;
+            struct ext2_dir_entry_2*newInodeBlk = (struct ext2_dir_entry_2 *)get_block(iBlock, disk);
+            (newInode->i_block)[i] = iBlock;
             // Load the file data to the block
             fread(newInodeBlk, EXT2_BLOCK_SIZE, 1, fp);
+            // Set the indirect block's block number
+            indirect_blk[i] = iBlock;
             // Decrement the remaining required blocks count
             blocks_needed--;
         }

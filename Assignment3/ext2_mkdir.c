@@ -108,25 +108,23 @@ int main ( int argc, char **argv ) {
    } else { printf("Inode index found: %d, name block: %d\n", iInode, iBlock); }
    // From the index we get the pointer to the inode & block
    struct ext2_inode *newInode = get_inode(iInode, disk);
-   struct ext2_dir_entry_2 *newInodeBlk = get_block(iBlock, disk);
+   struct ext2_dir_entry_2 *newInodeBlk = (struct ext2_dir_entry_2 *)get_block(iBlock, disk);
    struct ext2_dir_entry_2 *newInodeBlk2 = newInodeBlk + 12; // Harded coded offset of 12
 
    // A new directory entry needs to be created under the second last parent directory
    // Need a free block inside the parent directory inode for this
    int new_name_len = iLastChar - iLastDir + 1;
-   struct ext2_dir_entry_2 *newDirEtry = NULL; // TODO: implement in the helper function
+   int newDirEtryNum = find_spot_for_inode_entry(second_last_inode_number, disk);
+   struct ext2_dir_entry_2 *newDirEtry = (struct ext2_dir_entry_2 *)get_block(newDirEtryNum, disk); // TODO: implement in the helper function
    newDirEtry->file_type = EXT2_FT_DIR; // Set type of new directory entry
-   printf("here\n");
-   fflush(stdout);
    newDirEtry->inode = iInode + 1; // Set inode number
    newDirEtry->rec_len = new_name_len + 8; // TODO: check if the rec_len here is fine. Entry length is the length of the new directory name
    newDirEtry->name_len = new_name_len; // The name "." has length of 1
    memcpy(newDirEtry->name, argv[2]+iLastDir, new_name_len); // Set name of the entry
    
-   
 
    // Set attributes in the inode and its directory entries
-   (newInode->i_block)[0] = newInodeBlk; // TODO: ensure this is fine
+   (newInode->i_block)[0] = iBlock;
    newInode->i_mode = EXT2_S_IFREG;
    
    newInodeBlk->file_type = EXT2_FT_DIR; // Set type of new directory entry
@@ -146,9 +144,10 @@ int main ( int argc, char **argv ) {
    bgd->bg_free_blocks_count --;
    sb->s_free_inodes_count --;
    bgd->bg_free_blocks_count --;
+   update_inode_bitmap(1, iInode, disk);
 
 
-   printf("# Mkdir done #");
+   printf("# Mkdir done #\n");
    printInfo(disk); // debugging purpose
    return 0;
 }

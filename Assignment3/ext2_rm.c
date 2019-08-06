@@ -20,11 +20,8 @@ out data blocks, must set i_dtime in the inode, removing a directory entry need 
 entries after the one being deleted, etc.)
 __       __
   \(*_*)/
-<<<<<<< HEAD
         
-=======
      
->>>>>>> c1b1fbcb5d4c2211b5f50a72cbceef3358b2f9eb
 Bonus(5% extra): Implement an additional "-r" flag (after the disk image argument), which allows
 removing directories as well. In this case, you will have to recursively remove all the contents of the
 directory specified in the last argument. If "-r" is used with a regular file or link, then it should be ignored
@@ -49,7 +46,7 @@ unsigned char *disk;
      // changed something
      // changed seming again
 
-     printf("%d \n", argc);
+     
 
      // case if thee is incorrect number of arguments
      // note: copied for readimage.c from provided files  from week8&9
@@ -62,132 +59,15 @@ unsigned char *disk;
     // note: copied for readimage.c from provided files  from week8&9
     int fd = open(argv[1], O_RDWR);
 
-    // note: copied for readimage.c from provided files  from week8&9
-    // assign pointer to the nmap for the the given image
-    disk = mmap(NULL, 128 * 1024, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if(disk == MAP_FAILED) {
-	perror("mmap");
-	exit(1);
-    }
 
-
-    // note: copied for readimage.c from provided files  from week8&9
-    struct ext2_super_block *sb = (struct ext2_super_block *)(disk + 1024);
-    printf("Inodes: %d\n", sb->s_inodes_count);
-    printf("Blocks: %d\n", sb->s_blocks_count); 
-
-
-    //=============testing part=============
-    struct ext2_inode *inode = get_inode(get_root_inode_number(), disk);
-<<<<<<< HEAD
+    disk = map_image(fd);
     
 
-    
-
-    struct ext2_dir_entry* entry = entry = (struct ext2_dir_entry *)(disk + EXT2_BLOCK_SIZE * inode->i_block[0]);
-    printf("The directory name is: %s \n", entry->name);
-    printf("Number of Blocks is: %d \n", inode->i_blocks);
-
-    struct ext2_inode *inode2 = get_inode(entry->inode, disk);
-
-    
+    char* directory = argv[2];
    
 
-    // unsigned char *end = (orig + EXT2_BLOCK_SIZE);
-
-    // printf("The fist pos is: %s \n", pos);
-    // printf("The fist end is: %s \n", end);
-    
-    // struct ext2_dir_entry* second = (struct ext2_dir_entry *) pos;
-
-    // pos += second->rec_len;
-
-    // printf("The second pos is: %s \n", pos);
-
-    for (int i = 0; i < 12; i ++){
-
-         int block_num = (inode->i_block)[i];
-
-        unsigned char *orig = disk + (block_num * EXT2_BLOCK_SIZE);
-
-        unsigned char *pos = orig;
-
-        struct ext2_dir_entry_2* o = (struct ext2_dir_entry_2 *) pos;
-
-        if (o->inode != 0) {
-            int s = 0;
-            while (pos != orig + EXT2_BLOCK_SIZE) {
-                //(disk + EXT2_BLOCK_SIZE * inode2->i_block[i])
-                struct ext2_dir_entry* second = (struct ext2_dir_entry *) pos;
-                printf("The directory name is: %s \n", second->name);
-                
-
-                printf("file type is: %d \n", o->file_type);
-                
-                if ((o->file_type == EXT2_FT_DIR) && strcmp(second->name, ".") != 0 && strcmp(second->name, "..") != 0) {
-                    printf("found \n");
-                    inode = get_inode(o->inode, disk);
-                    s++;
-                }
-            
-                pos += second->rec_len;
-            }
-
-        }
-        
-         
-        
-    }
-    
-    printf("Number of Blocks is: %d \n", inode2->i_blocks);
-    
-
-    //char* local_file = "/foo/bar/baz.txt";
-
-    // char* ts1 = strdup(local_file);
-    // char* ts2 = strdup(local_file);
-
-    // char* dir = dirname(ts1);
-    // char* filename = basename(ts2);
-
-    // printf("file directory is: %s \n", dir);
-    // printf("file name is: %s \n", filename);
-=======
-
-    struct ext2_dir_entry* entry = (struct ext2_dir_entry *)(disk + EXT2_BLOCK_SIZE * inode->i_block[1]);
-
-    printf("The directory name is: %s \n", entry->name);
-    printf("Number of Blocks is: %d \n", inode->i_blocks);
-
-
-    char* local_file = "/foo/bar/baz.txt";
-
-    char* ts1 = strdup(local_file);
-    char* ts2 = strdup(local_file);
-
-    char* dir = dirname(ts1);
-    char* filename = basename(ts2);
-
-    printf("file directory is: %s \n", dir);
-    printf("file name is: %s \n", filename);
->>>>>>> c1b1fbcb5d4c2211b5f50a72cbceef3358b2f9eb
-
-
-    //======================================
-
-
-
-    //locate the root inode
-
-    // check if the given directory in argv[2] is a directory or a file    
-
-    // check if a file exists
-
-    // remove the file
-
-    // learn how to free the inode
-
-    // learn which properties need to be updated when file is removed
+    printf("then inode number is: %d \n", find_dir_inode(directory, disk));    
+   
 
      return 0;
  }

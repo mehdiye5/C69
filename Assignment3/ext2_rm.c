@@ -65,8 +65,11 @@ unsigned char *disk;
 
     char* directory = argv[2];
    
+   //unsigned char * entry_location = find_dir_inode(directory, disk);
 
-    printf("then inode number is: %d \n", find_dir_inode(directory, disk));    
+    //printf("then inode number is: %d \n", ((struct ext2_dir_entry_2 *) entry_location)->inode);    
+
+    delete_file_inode(directory, disk);
    
 
      return 0;

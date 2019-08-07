@@ -53,5 +53,4 @@ Three_indices generate_position(char *path); //#
 int find_free_inode(unsigned char *disk); //#
 int find_free_block(unsigned char *disk); //#
 int find_spot_for_inode_entry(int inode_number, unsigned char *disk); //#
-void update_inode_bitmap (int binary_state, int inode_number, unsigned char *disk); //#
 void printInfo(unsigned char *disk); //#

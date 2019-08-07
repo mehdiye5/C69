@@ -40,11 +40,9 @@ This is a helper module where the helper functions will be located, to be used b
   * note: integer is 8 bytes so we need to account for that during the bit shift
   */
  void * set_inode_bitmap(int inode_number, unsigned char* disk) {
-    printInfo(disk);
     struct ext2_group_desc *blocks = get_blocks_group_descriptor(disk);
     unsigned char * bitmap = (disk + blocks->bg_inode_bitmap * EXT2_BLOCK_SIZE);
     bitmap[(inode_number -1)/8] |= (1 << ((inode_number - 1) % 8));
-    printInfo(disk);
  }
 
  /**
@@ -54,7 +52,7 @@ This is a helper module where the helper functions will be located, to be used b
  void * set_block_bitmap(int block_number, unsigned char* disk) {
      struct ext2_group_desc *blocks = get_blocks_group_descriptor(disk);
     unsigned char * bitmap = (disk + blocks->bg_block_bitmap * EXT2_BLOCK_SIZE);
-    bitmap[block_number >> 3] |= (1 << (block_number - 1) % 8);  
+    bitmap[(block_number -1)/8] |= (1 << (block_number - 1) % 8);  
  }
 
 
@@ -649,12 +647,12 @@ int find_spot_for_inode_entry(int inode_number, unsigned char *disk) {
             }
             inode->i_block[i] = new_allocated;
             // TODO: flip the bit
-            set_block_bitmap(new_allocated + 1, disk);
+            // set_block_bitmap(new_allocated + 1, disk);
             return new_allocated + 1;
         }
         if (is_block_free(curr_block_number, disk)) {
             // TODO: flip the bit
-            set_block_bitmap(curr_block_number, disk);
+            // set_block_bitmap(curr_block_number, disk);
             return curr_block_number;
         }
     }
@@ -669,30 +667,17 @@ int find_spot_for_inode_entry(int inode_number, unsigned char *disk) {
             }
             indirect_blk[i] = new_allocated;
             // TODO: flip the bit
-            set_block_bitmap(new_allocated + 1, disk);
+            // set_block_bitmap(new_allocated + 1, disk);
             return new_allocated + 1;
         }
         if (is_block_free(curr_block_number, disk)) {
             // TODO: flip the bit
-            set_block_bitmap(curr_block_number, disk);
+            // set_block_bitmap(curr_block_number, disk);
             return curr_block_number;
         }
     }
     // No free block under direct and first-level indirect
     return -1;
-}
-
-void update_inode_bitmap (int binary_state, int inode_number, unsigned char *disk) {
-    // struct ext2_super_block *sb = (struct ext2_super_block *)(disk + EXT2_BLOCK_SIZE);
-    // // Get inode bitmap
-    // char *bmi = (char *) get_inode_bitmap(disk);
-    // if (binary_state == 1) {
-    //     bmi |= 1UL << (inode_number-1);
-    //     return;
-    // }
-    // if (binary_state = 0) {
-    //     bmi &= ~(1UL << (inode_number-1));
-    // }
 }
 
 

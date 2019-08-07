@@ -91,7 +91,7 @@ int main ( int argc, char **argv ) {
       entry = (void*) entry + entry->rec_len; // move to the next entry
    }
    // Function does not exit in the above loop --> path okay
-   printf("# Path check passed: input path okay #\n");
+   //printf("# Path check passed: input path okay #\n");
 
 
    /* The program has been tested till this point */
@@ -105,7 +105,7 @@ int main ( int argc, char **argv ) {
       return ENOENT;
    }
    struct ext2_inode *newInode = get_inode(iInode + 1, disk);
-   printf("Inode free at index %d\n", iInode);
+   //printf("Inode free at index %d\n", iInode);
    
    // A new directory entry needs to be created under the second last parent directory
    // Need a free block inside the parent directory inode for this
@@ -118,8 +118,8 @@ int main ( int argc, char **argv ) {
    newDirEtry->name_len = new_name_len;
    memcpy(newDirEtry->name, argv[2]+iLastDir, new_name_len); // Set name of the entry
    set_block_bitmap(newDirEtryNum, disk);
-   printf("Parent entry for inode in block number %d\n", newDirEtryNum);
-   printInfo(disk);
+   //printf("Parent entry for inode in block number %d\n", newDirEtryNum);
+   //printInfo(disk);
    // From the index we get the pointer to the inode & block
    
    int iBlock = find_free_block(disk);
@@ -130,8 +130,8 @@ int main ( int argc, char **argv ) {
    struct ext2_dir_entry_2 *newInodeBlk = (struct ext2_dir_entry_2 *)get_block(iBlock+1, disk);
    struct ext2_dir_entry_2 *newInodeBlk2 = newInodeBlk + 12; // Harded coded offset of 12
    set_block_bitmap(iBlock + 1, disk);
-   printf("Inode's block free at index %d\n", iBlock);
-   printInfo(disk);
+   //printf("Inode's block free at index %d\n", iBlock);
+   //printInfo(disk);
    // Set attributes in the inode and its directory entries
    (newInode->i_block)[0] = iBlock;
    newInode->i_mode = EXT2_S_IFREG;
@@ -156,10 +156,10 @@ int main ( int argc, char **argv ) {
    set_inode_bitmap(iInode + 1, disk);
 
 
-   printf("# Mkdir done #\n");
+   //printf("# Mkdir done #\n");
    
    struct ext2_dir_entry_2* result = (struct ext2_dir_entry_2*)get_block(newDirEtryNum, disk);
-   printInfo(disk);
-   printf("%s\n", result->name);
+   //printInfo(disk);
+   //printf("%s\n", result->name);
    return 0;
 }

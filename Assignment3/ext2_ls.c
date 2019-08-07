@@ -52,14 +52,15 @@ int main(int argc, char **argv) {
     struct ext2_group_desc *bgd = (struct ext2_group_desc *)(disk + (EXT2_BLOCK_SIZE *  2));
     struct ext2_super_block *sb = (struct ext2_super_block *)(disk + EXT2_BLOCK_SIZE);
     struct ext2_inode *inode_table = (struct ext2_inode *)(disk + (EXT2_BLOCK_SIZE * bgd->bg_inode_table));
-    struct ext2_inode *curr = inode_table+(EXT2_ROOT_INO-1);
+
     // must use ext2_dir_entry_2 for assignment
     struct ext2_dir_entry_2 *d;
 
     //get path and check if it exists
     char *path = argv[2];
-    int i = 0;
-    char inode_num = find_dir_inode_num(path, disk);
+
+    char inode = find_dir_inode(path, disk);
+    int inode_num = ((struct ext2_dir_entry_2 *) inode) -> inode;
 
 
     struct ext2_inode *c = inode_table+(inode_num-1);
@@ -77,45 +78,6 @@ int main(int argc, char **argv) {
     }
 
     return 0;
-}
-
-/* from helper.c but instead returns inode num
- */
-int * find_dir_inode_num(char * directory, unsigned char *disk ) {
-    struct ext2_inode *inode = get_inode(get_root_inode_number(), disk);
-
-    char * sub_dir_name = NULL;
-    char * n_dir = get_dir_name(directory);
-    int inode_number = 0;
-
-    unsigned char * entry_location = NULL;
-
-    while (n_dir != NULL)
-    {
-        sub_dir_name = next_sub_dir_name(n_dir);
-
-        //printf("next sub dir name is: %s \n", n_dir) ;
-
-        //printf("next dir name is: %s \n", sub_dir_name) ;
-        
-        if (sub_dir_name != NULL) {
-            entry_location =  find_sub_dir_inode(sub_dir_name, inode , disk, EXT2_FT_DIR);
-
-            //printf("next inode number is: %d \n", inode_number);
-            
-            if (entry_location == NULL) {
-                perror("Sub directory doesn't exist: ");
-                exit(1);
-            }
-            
-            inode_number = ((struct ext2_dir_entry_2 *) entry_location)->inode;
-            inode = get_inode(inode_number, disk);
-
-        }
-        
-        n_dir = next_dir(n_dir);
-    }
-    return inode_number;
 }
 
 

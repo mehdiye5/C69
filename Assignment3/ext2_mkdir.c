@@ -41,7 +41,7 @@ int main ( int argc, char **argv ) {
 	   perror("mmap");
 	   exit(1);
    }
-   printInfo(disk); // debugging purpose
+   //printInfo(disk); // debugging purpose
 
    /* --------------- Initialize relevant poitners and indices --------------- */
    // Pointer to the super block
@@ -157,9 +157,8 @@ int main ( int argc, char **argv ) {
 
 
    //printf("# Mkdir done #\n");
-   
-   struct ext2_dir_entry_2* result = (struct ext2_dir_entry_2*)get_block(newDirEtryNum, disk);
+
    //printInfo(disk);
-   //printf("%s\n", result->name);
+   printf("%s\n", newDirEtry->name);
    return 0;
 }

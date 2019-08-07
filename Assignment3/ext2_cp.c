@@ -39,7 +39,6 @@ int main ( int argc, char **argv ) {
         perror("mmap");
         exit(1);
     }
-    printInfo(disk); // debugging purpose
     // Pointer to the super block
    struct ext2_super_block *sb = (struct ext2_super_block *)(disk + EXT2_BLOCK_SIZE);
    struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2*EXT2_BLOCK_SIZE);
@@ -102,7 +101,8 @@ int main ( int argc, char **argv ) {
     // Function does not exit in the above loop --> path okay
     printf("# Path check passed: input path okay #\n");
 
-
+    printf("right before loading data");
+    printInfo(disk);
 
     /* ----------------- Load the file information into the inode blocks --------------------------*/
     // Index of a free inode
@@ -114,6 +114,10 @@ int main ( int argc, char **argv ) {
     // Pointer to the free inode
     struct ext2_inode *newInode = get_inode(iInode + 1, disk);
     newInode->i_mode = EXT2_S_IFREG;
+    set_inode_bitmap(iInode+1, disk);
+
+    printf("inode found at index %d\n", iInode);
+    printInfo(disk);
     
     // Directory entry for the free inode
     int newFileEtryNum = find_spot_for_inode_entry(last_inode_number, disk);
@@ -125,7 +129,11 @@ int main ( int argc, char **argv ) {
     newFileEtry->rec_len = new_name_len + 8; // TODO: check if the rec_len here is fine. Entry length is the length of the new directory name
     newFileEtry->name_len = new_name_len;
     memcpy(newFileEtry->name, argv[2]+iOsLastDir, new_name_len);
+    set_block_bitmap(newFileEtryNum, disk);
     
+    printf("block found at number %d\n", newFileEtryNum);
+    printInfo(disk);
+
     // Total number of blocks needed for the file
     fseek(fp, 0, SEEK_END);
 	int blocks_needed = ftell(fp) / EXT2_BLOCK_SIZE + 1; // Round up the result

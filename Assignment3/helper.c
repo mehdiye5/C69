@@ -574,7 +574,7 @@ int find_free_inode(unsigned char *disk) {
         }
     }
     // Set the target inode to be all 0
-    memset(get_inode(index, disk), 0, sizeof(struct ext2_inode));
+    memset(get_inode(index + 1, disk), 0, sizeof(struct ext2_inode));
     return index;
 }
 
@@ -602,7 +602,8 @@ int find_free_block(unsigned char *disk) {
         }
     }
     // Set the target block to be all 0
-    memset(get_block(index, disk), 0, EXT2_BLOCK_SIZE);
+    memset(get_block(index + 1, disk), 0, EXT2_BLOCK_SIZE);
+    //printf("free block index is %d\n", index);
     return index;
 }
 
@@ -629,7 +630,7 @@ int is_block_free(int block_number, unsigned char *disk) {
         }
     }
     // Set the target block to be all 0
-    memset(get_block(index, disk), 0, EXT2_BLOCK_SIZE);
+    memset(get_block(index + 1, disk), 0, EXT2_BLOCK_SIZE);
     return index;
 }
 

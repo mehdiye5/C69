@@ -118,24 +118,27 @@ int main ( int argc, char **argv ) {
    newDirEtry->name_len = new_name_len;
    memcpy(newDirEtry->name, argv[2]+iLastDir, new_name_len); // Set name of the entry
    set_block_bitmap(newDirEtryNum, disk);
+   ///////
    //printf("Parent entry for inode in block number %d\n", newDirEtryNum);
    //printInfo(disk);
    // From the index we get the pointer to the inode & block
-   
+   //printf("newDirEtry index is: %d\n", newDirEtryNum - 1);
+   //printf("%s\n", newDirEtry->name);
    int iBlock = find_free_block(disk);
    if (iBlock == -1) {
       fprintf(stderr, "Disk compact.");
       return ENOENT;
    }
+   
    struct ext2_dir_entry_2 *newInodeBlk = (struct ext2_dir_entry_2 *)get_block(iBlock+1, disk);
    struct ext2_dir_entry_2 *newInodeBlk2 = newInodeBlk + 12; // Harded coded offset of 12
+   /////////
    set_block_bitmap(iBlock + 1, disk);
    //printf("Inode's block free at index %d\n", iBlock);
    //printInfo(disk);
    // Set attributes in the inode and its directory entries
    (newInode->i_block)[0] = iBlock;
    newInode->i_mode = EXT2_S_IFREG;
-
    newInodeBlk->file_type = EXT2_FT_DIR;
    newInodeBlk->inode = iInode + 1;
    newInodeBlk->rec_len = 12; // Hard-coded length 12 for self directory entry "."
@@ -159,6 +162,6 @@ int main ( int argc, char **argv ) {
    //printf("# Mkdir done #\n");
 
    //printInfo(disk);
-   printf("%s\n", newDirEtry->name);
+   //printf("%s\n", newDirEtry->name);
    return 0;
 }

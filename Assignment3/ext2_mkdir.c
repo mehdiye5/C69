@@ -9,6 +9,7 @@
 #include "helper.h"
 #include <libgen.h>
 #include <string.h>
+#include <errno.h>
 
 /*
 This program takes two command line arguments. The first is the name of an ext2 formatted
@@ -57,7 +58,7 @@ int main ( int argc, char **argv ) {
    iNode_info *second_last_info = step_to_target(disk, fd, argv[2], 1);
    if (second_last_info == NULL) {
       fprintf(stderr, "! Invalid path !\n");
-      exit(1);
+      return ENOENT;
    }
    struct ext2_inode *second_last_inode = second_last_info->iNode;
    int second_last_inode_number = second_last_info->iNode_number;
@@ -82,7 +83,7 @@ int main ( int argc, char **argv ) {
             // Directory with the desired name matched
             if (match_name(argv[2], file_name, iLastDir, iLastChar)) {
                fprintf(stderr, "Directory \"%s\" trying to create already exists\n", file_name);
-               exit(1);
+               return ENOENT;
             }
       }
       // Else update relavent index to keep checking the rest of the files
@@ -103,7 +104,7 @@ int main ( int argc, char **argv ) {
    int iInode = find_free_inode(disk);
    if (iInode == -1) {
       fprintf(stderr, "Disk compact.");
-      exit(1);
+      return ENOENT;
    }
    struct ext2_inode *newInode = get_inode(iInode + 1, disk);
    printf("Inode free at index %d\n", iInode);
@@ -125,7 +126,7 @@ int main ( int argc, char **argv ) {
    int iBlock = find_free_block(disk);
    if (iBlock == -1) {
       fprintf(stderr, "Disk compact.");
-      exit(1);
+      return ENOENT;
    }
    struct ext2_dir_entry_2 *newInodeBlk = (struct ext2_dir_entry_2 *)get_block(iBlock+1, disk);
    struct ext2_dir_entry_2 *newInodeBlk2 = newInodeBlk + 12; // Harded coded offset of 12
@@ -155,7 +156,9 @@ int main ( int argc, char **argv ) {
 
 
    printf("# Mkdir done #\n");
-   printInfo(disk); // debugging purpose
+   
+   set_inode_bitmap(16, disk);
+   
    struct ext2_dir_entry_2* result = (struct ext2_dir_entry_2*)get_block(newDirEtryNum, disk);
    printf("%s\n", result->name);
    return 0;

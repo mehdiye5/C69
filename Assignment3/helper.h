@@ -4,6 +4,8 @@
 
 void * unset_inode_bitmap(int inode_number, unsigned char* disk);
 void * unset_block_bitmap(int block_number, unsigned char* disk);
+void * set_inode_bitmap(int inode_number, unsigned char* disk);
+void * set_block_bitmap(int block_number, unsigned char* disk);
 struct ext2_super_block * get_super_block (unsigned char* disk);
 char* substring(char* str, size_t begin, size_t end);
 int get_root_inode_number(void);

@@ -19,4 +19,4 @@ bon: ext2_cp.c helper.c
 	gcc -Wall -g -c $^
 
 clean:
-	rm *.o ext2_rm ext2_mkdir ext2_cp
+	-rm *.o $(objects) ext2_rm ext2_mkdir ext2_cp

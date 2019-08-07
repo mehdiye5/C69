@@ -89,8 +89,6 @@ int main ( int argc, char **argv ) {
       // Else update relavent index to keep checking the rest of the files
       size += entry->rec_len; // update size we have read so far
       entry = (void*) entry + entry->rec_len; // move to the next entry
-      
-      printf("size: %d, rec_len: %d\n", size, second_last_inode->i_size);
    }
    // Function does not exit in the above loop --> path okay
    printf("# Path check passed: input path okay #\n");

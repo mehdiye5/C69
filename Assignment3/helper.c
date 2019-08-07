@@ -13,6 +13,7 @@ This is a helper module where the helper functions will be located, to be used b
 #include "helper.h"
 #include <libgen.h>
 #include <string.h>
+#include <errno.h>
  
 
 /**
@@ -249,7 +250,7 @@ unsigned char * find_sub_dir_inode (char * sub_dir_name, struct ext2_inode* dir_
     unsigned char * entry_location = NULL;
 
     // go through every block in the inode
-    for (int i = 0; i < dir_inode->i_blocks; i ++){
+    for (int i = 0; i < 12; i ++){
 
         // check if the block contains wanted directory
         entry_location = check_inode_block((dir_inode->i_block)[i], disk, sub_dir_name, f_type);

@@ -394,7 +394,7 @@ int delete_file_inode(char *directory ,unsigned char *disk) {
 }
 
 
-// functions added by Robert later below //
+/*--------------------------- functions added by Robert later below ---------------------------*/
 
 /**
  * Function returns the block bitmap
@@ -516,8 +516,8 @@ iNode_info *step_to_target(unsigned char* disk, int fd, char *path, int flag) {
                 file_name[entry->name_len] = 0; // null char at the end
                 // Directory with the desired name matched
                 if (match_name(path, file_name, iPathAnchor, iLastChar)) {
-                    printf("# found file %s, inode %u #\n", file_name, entry->inode);
-                    printf("------------ next round ------------\n");
+                    // printf("# found file %s, inode %u #\n", file_name, entry->inode);
+                    // printf("------------ next round ------------\n");
                     found = entry;
                     currInode = get_inode(found->inode, disk);
                     iPathAnchor = iPathAnchor + entry->name_len + 1; // Update anchor of the input path
@@ -529,7 +529,7 @@ iNode_info *step_to_target(unsigned char* disk, int fd, char *path, int flag) {
             size += entry->rec_len; // update size we have read so far
             entry = (void*) entry + entry->rec_len; // move to the next entry
             
-            printf("size: %d, rec_len: %d\n", size, currInode->i_size);
+            // printf("size: %d, rec_len: %d\n", size, currInode->i_size);
         }
         // If we do not find any inode that: it is a directory inode and it match the name, then complain
         if (found == NULL) {
@@ -537,7 +537,7 @@ iNode_info *step_to_target(unsigned char* disk, int fd, char *path, int flag) {
         }
         // If we reach the index of the last directory, exit the loop
         if ((flag == 1 && iPathAnchor == iLastDir) || (flag == 0 && iPathAnchor == iLastChar+2)) {
-            printf("# Valid path: target directory reached #\n");
+            //printf("# Valid path: target directory reached #\n");
             iNode_info *result = malloc(sizeof(iNode_info));
             result->iNode = currInode;
             result->iNode_number = found->inode;

@@ -155,8 +155,7 @@ int main ( int argc, char **argv ) {
 
    printf("# Mkdir done #\n");
    
-   set_inode_bitmap(16, disk);
-   
+   //set_inode_bitmap(16, disk);
    struct ext2_dir_entry_2* result = (struct ext2_dir_entry_2*)get_block(newDirEtryNum, disk);
    printf("%s\n", result->name);
    return 0;

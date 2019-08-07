@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
     //get path and check if it exists
     char *path = argv[2];
 
-    char inode = find_dir_inode(path, disk);
+    char *inode = find_dir_inode(path, disk);
     int inode_num = ((struct ext2_dir_entry_2 *) inode) -> inode;
 
 
@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
         //it's a regular file
         printf("%s\n", path);
     } else {
-        fprintf(stderr, "‘%s’: No such file or directory\n");	
+        fprintf(stderr, "‘%s’: No such file or directory\n", path);	
 	    exit(ENOENT);
     }
 
@@ -104,7 +104,7 @@ void print_dir_contents(struct ext2_inode *inode, int i){
 				printf("%s\n", name);
 				size -= d->rec_len;
 				d = (struct ext2_dir_entry_2 *)((char *) d+d->rec_len);
-			}
-			
+			}			
 		}
 	}
+}
